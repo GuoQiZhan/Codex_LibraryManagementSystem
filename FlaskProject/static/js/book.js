@@ -132,34 +132,17 @@ function bindEventListeners() {
 
 // 加载图书统计数据
 async function loadBookStats() {
-    // 尝试从缓存获取数据
-    const cachedStats = getFromCache(CACHE_CONFIG.bookStats.key);
-    if (cachedStats) {
-        // 使用缓存数据
-        if (window.statsCards.totalBooks) {
-            window.statsCards.totalBooks.textContent = cachedStats.total_books || 0;
-        }
-        if (window.statsCards.availableBooks) {
-            window.statsCards.availableBooks.textContent = cachedStats.available_stock || 0;
-        }
-        if (window.statsCards.borrowedBooks) {
-            window.statsCards.borrowedBooks.textContent = cachedStats.current_borrowed || 0;
-        }
-        if (window.statsCards.newBooks) {
-            window.statsCards.newBooks.textContent = cachedStats.new_books || 0;
-        }
-        return;
-    }
-    
-    // 显示加载状态
     showLoading('bookStats');
-    
+
     try {
-        const response = await fetch('/api/stats/overview');
+        const response = await fetch('/api/hbase/books/stats');
         const data = await response.json();
 
-        // 从overview对象中提取数据
-        const overview = data.overview || {};
+        if (data.error) {
+            throw new Error(data.error);
+        }
+
+        const overview = data.overview || data;
 
         if (window.statsCards.totalBooks) {
             window.statsCards.totalBooks.textContent = overview.total_books || 0;
@@ -171,27 +154,14 @@ async function loadBookStats() {
             window.statsCards.borrowedBooks.textContent = overview.current_borrowed || 0;
         }
         if (window.statsCards.newBooks) {
-            // 这里需要专门的API获取本月新增图书数
-            // 暂时使用0或从popular_books推断
-            window.statsCards.newBooks.textContent = 0;
+            window.statsCards.newBooks.textContent = data.new_books || 0;
         }
-        
-        // 缓存统计数据
-        const statsData = {
-            total_books: overview.total_books || 0,
-            available_stock: overview.available_stock || 0,
-            current_borrowed: overview.current_borrowed || 0,
-            new_books: 0
-        };
-        saveToCache(CACHE_CONFIG.bookStats.key, statsData, CACHE_CONFIG.bookStats.expiry);
+
+        saveToCache(CACHE_CONFIG.bookStats.key, overview, CACHE_CONFIG.bookStats.expiry);
 
     } catch (error) {
         console.error('加载图书统计数据失败:', error);
-        showNotification('统计信息加载失败', 'error');
-    }
-    finally {
-        // 隐藏加载状态
-        // 注意：不需要调用hideLoading，因为数据加载后会直接更新内容
+        showNotification('统计信息加载失败: ' + error.message, 'error');
     }
 }
 
@@ -199,30 +169,13 @@ async function loadBookStats() {
 async function loadBooksData() {
     if (window.bookState.isLoading) return;
 
-    // 生成缓存键
-    const cacheKey = `${CACHE_CONFIG.books.key}_${window.bookState.currentPage}_${window.bookState.searchQuery}_${window.bookState.categoryFilter}_${window.bookState.statusFilter}`;
-    
-    // 尝试从缓存获取数据
-    const cachedBooks = getFromCache(cacheKey);
-    if (cachedBooks) {
-        // 使用缓存数据
-        window.bookState.totalPages = cachedBooks.pages || 1;
-        window.bookState.totalBooks = cachedBooks.total || 0;
-        updatePaginationUI();
-        updateBooksDisplay(cachedBooks.books || []);
-        return;
-    }
-
-    // 显示加载状态
+    window.bookState.isLoading = true;
     showLoading('booksGrid');
-    
-    try {
-        window.bookState.isLoading = true;
 
-        // 构建查询参数，匹配后端API
+    try {
         const params = new URLSearchParams();
         params.append('page', window.bookState.currentPage);
-        params.append('per_page', 12); // 每页显示12本书
+        params.append('per_page', 12);
 
         if (window.bookState.searchQuery) {
             params.append('search', window.bookState.searchQuery);
@@ -230,39 +183,30 @@ async function loadBooksData() {
         if (window.bookState.categoryFilter) {
             params.append('category', window.bookState.categoryFilter);
         }
-        // 将状态筛选转换为available_only参数
         if (window.bookState.statusFilter === 'available') {
             params.append('available_only', 'true');
         }
-        // 注意：后端API不支持'borrowed'和'reserved'状态筛选
-        // 这些需要更复杂的查询，暂时不实现
 
-        const response = await fetch(`/api/book/?${params}`);
+        const response = await fetch(`/api/hbase/books?${params}`);
         const data = await response.json();
 
-        // 更新分页信息，匹配后端响应字段名
+        if (data.error) {
+            throw new Error(data.error);
+        }
+
         window.bookState.totalPages = data.pages || 1;
         window.bookState.totalBooks = data.total || 0;
 
-        // 更新分页UI
         updatePaginationUI();
-
-        // 根据当前视图更新图书展示
         updateBooksDisplay(data.books || []);
-        
-        // 缓存数据
-        saveToCache(cacheKey, data, CACHE_CONFIG.books.expiry);
+
+        saveToCache(CACHE_CONFIG.books.key, data, CACHE_CONFIG.books.expiry);
 
     } catch (error) {
         console.error('加载图书数据失败:', error);
-        showNotification('图书数据加载失败，请检查网络连接', 'error');
-
-        // 显示模拟数据作为后备
-        showMockBooks();
-
+        showNotification('图书数据加载失败: ' + error.message, 'error');
     } finally {
         window.bookState.isLoading = false;
-        // 注意：不需要调用hideLoading，因为数据加载后会直接更新内容
     }
 }
 
@@ -518,54 +462,6 @@ function showNoBooksMessage() {
     }
 }
 
-// 显示模拟图书数据（API失败时的后备方案）
-function showMockBooks() {
-    const mockBooks = [
-        {
-            isbn: '9787115428028',
-            title: 'Python编程从入门到实践',
-            author: 'Eric Matthes',
-            category_name: '计算机',
-            category: '计算机',
-            total_stock: 8,
-            available_stock: 5,
-            is_available: true
-        },
-        {
-            isbn: '9787115324443',
-            title: 'JavaScript高级程序设计',
-            author: 'Nicholas C. Zakas',
-            category_name: '计算机',
-            category: '计算机',
-            total_stock: 6,
-            available_stock: 0,
-            is_available: false
-        },
-        {
-            isbn: '9787301262431',
-            title: '经济学原理',
-            author: 'N. Gregory Mankiw',
-            category_name: '经济管理',
-            category: '经济管理',
-            total_stock: 10,
-            available_stock: 3,
-            is_available: true
-        },
-        {
-            isbn: '9787544253994',
-            title: '百年孤独',
-            author: 'Gabriel García Márquez',
-            category_name: '文学',
-            category: '文学',
-            total_stock: 5,
-            available_stock: 2,
-            is_available: true
-        }
-    ];
-
-    updateBooksDisplay(mockBooks);
-}
-
 // 图书操作函数
 function borrowBook(bookId) {
     if (!bookId) return;
@@ -599,99 +495,331 @@ function borrowBook(bookId) {
     });
 }
 
-function viewBook(bookId) {
-    if (!bookId) return;
-
-    showNotification(`正在查看图书详情: ${bookId}`, 'info');
-
-    // 这里应该跳转到图书详情页面或显示详情模态框
-    // window.location.href = `/book/${bookId}`;
+function viewBook(isbn) {
+    if (!isbn) return;
+    openBookDetailModal(isbn);
 }
 
-function editBook(bookId) {
-    if (!bookId) return;
+function openBookDetailModal(isbn) {
+    const modal = document.getElementById('bookDetailModal');
+    const content = document.getElementById('bookDetailContent');
+    if (!modal || !content) return;
 
-    showNotification(`正在编辑图书信息: ${bookId}`, 'info');
+    content.innerHTML = `
+        <div class="loading-container">
+            <div class="loading-spinner"></div>
+            <p>正在加载...</p>
+        </div>
+    `;
 
-    // 这里应该跳转到编辑页面或显示编辑模态框
-    // window.location.href = `/book/${bookId}/edit`;
+    modal.style.display = 'flex';
+    requestAnimationFrame(() => {
+        modal.style.opacity = '1';
+    });
+
+    fetchBookDetail(isbn);
 }
+
+function closeBookDetailModal() {
+    const modal = document.getElementById('bookDetailModal');
+    if (!modal) return;
+
+    modal.style.opacity = '0';
+    setTimeout(() => {
+        modal.style.display = 'none';
+    }, 300);
+}
+
+async function fetchBookDetail(isbn) {
+    const content = document.getElementById('bookDetailContent');
+
+    try {
+        const response = await fetch(`/api/hbase/books/${isbn}`);
+        const book = await response.json();
+
+        if (!response.ok || book.error) {
+            throw new Error(book.error || '获取图书详情失败');
+        }
+
+        const totalStock = book.total_stock || 0;
+        const availableStock = book.available_stock || 0;
+        const borrowedStock = totalStock - availableStock;
+
+        let statusClass, statusText;
+        if (availableStock > 0) {
+            statusClass = 'status-available';
+            statusText = '可借阅';
+        } else if (borrowedStock > 0) {
+            statusClass = 'status-borrowed';
+            statusText = '已借出';
+        } else {
+            statusClass = 'status-unavailable';
+            statusText = '无库存';
+        }
+
+        const categoryIcons = {
+            '计算机': '💻', '文学': '📚', '经济管理': '📈', '历史': '🏛️',
+            '哲学': '🤔', '艺术': '🎨', '生活': '🏠', '科技': '🔬'
+        };
+        const icon = categoryIcons[book.category_name] || '📖';
+
+        content.innerHTML = `
+            <div class="book-detail-header">
+                <div class="book-cover-large">${icon}</div>
+                <div class="book-main-info">
+                    <h3>${escapeHtml(book.title)}</h3>
+                    <p class="author">${escapeHtml(book.author || '未知作者')}</p>
+                    <span class="book-status-badge ${statusClass}">${statusText}</span>
+                </div>
+            </div>
+
+            <div class="book-detail-grid">
+                <div class="detail-item">
+                    <div class="detail-label">ISBN编号</div>
+                    <div class="detail-value">${escapeHtml(book.isbn)}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">出版社</div>
+                    <div class="detail-value">${escapeHtml(book.publisher || '未知')}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">出版年份</div>
+                    <div class="detail-value">${escapeHtml(book.publish_year || '未知')}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">分类</div>
+                    <div class="detail-value">${escapeHtml(book.category_name || '未分类')}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">价格</div>
+                    <div class="detail-value">¥${escapeHtml(book.price || '0')}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">热门指数</div>
+                    <div class="detail-value">${escapeHtml(book.hot_score || '0')}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">总库存</div>
+                    <div class="detail-value">${totalStock} 册</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">可借数量</div>
+                    <div class="detail-value">${availableStock} 册</div>
+                </div>
+                <div class="detail-item full-width">
+                    <div class="detail-label">借阅次数</div>
+                    <div class="detail-value">${book.borrow_count || 0} 次</div>
+                </div>
+            </div>
+
+            ${book.description ? `
+            <div class="book-description">
+                <h4>内容简介</h4>
+                <p>${escapeHtml(book.description)}</p>
+            </div>
+            ` : ''}
+
+            <div class="book-detail-actions">
+                <button class="btn btn-danger" onclick="deleteBook('${escapeHtml(book.isbn)}')">删除</button>
+                <button class="btn btn-secondary" onclick="editBook('${escapeHtml(book.isbn)}')">编辑</button>
+                <button class="btn btn-primary" onclick="borrowBook('${escapeHtml(book.isbn)}'); closeBookDetailModal();">借阅</button>
+            </div>
+        `;
+
+    } catch (error) {
+        content.innerHTML = `
+            <div class="error-container" style="text-align: center; padding: 2rem;">
+                <p style="color: #dc3545; margin-bottom: 1rem;">加载失败: ${escapeHtml(error.message)}</p>
+                <button class="btn btn-secondary" onclick="closeBookDetailModal()">关闭</button>
+            </div>
+        `;
+    }
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function editBook(isbn) {
+    if (!isbn) return;
+    openEditBookModal(isbn);
+}
+
+let currentEditIsbn = null;
 
 // 模态框控制
 function openNewBookModal() {
+    currentEditIsbn = null;
     const modal = document.getElementById('newBookModal');
+    const form = document.getElementById('newBookForm');
+    const title = document.querySelector('#newBookModal h2');
+
+    if (form) form.reset();
+    if (title) title.textContent = '添加新书';
+
     if (modal) {
         modal.style.display = 'flex';
     }
 }
 
+function openEditBookModal(isbn) {
+    currentEditIsbn = isbn;
+    const modal = document.getElementById('newBookModal');
+    const form = document.getElementById('newBookForm');
+    const title = document.querySelector('#newBookModal h2');
+
+    if (title) title.textContent = '编辑图书';
+
+    fetchBookDetailForEdit(isbn);
+
+    if (modal) {
+        modal.style.display = 'flex';
+    }
+}
+
+async function fetchBookDetailForEdit(isbn) {
+    try {
+        const response = await fetch(`/api/hbase/books/${isbn}`);
+        const book = await response.json();
+
+        if (book.error) {
+            showNotification('获取图书信息失败: ' + book.error, 'error');
+            return;
+        }
+
+        const form = document.getElementById('newBookForm');
+        if (form) {
+            form.elements['title'].value = book.title || '';
+            form.elements['author'].value = book.author || '';
+            form.elements['isbn'].value = book.isbn || '';
+            form.elements['isbn'].readOnly = true;
+            form.elements['publisher'].value = book.publisher || '';
+            form.elements['publish_year'].value = book.publish_year || '';
+            form.elements['category_name'].value = book.category_name || '';
+            form.elements['description'].value = book.description || '';
+            form.elements['total_stock'].value = book.total_stock || 0;
+            form.elements['available_stock'].value = book.available_stock || 0;
+            form.elements['price'].value = book.price || '';
+            form.elements['hot_score'].value = book.hot_score || 0;
+        }
+    } catch (error) {
+        showNotification('获取图书信息失败', 'error');
+    }
+}
+
 function closeNewBookModal() {
     const modal = document.getElementById('newBookModal');
+    const form = document.getElementById('newBookForm');
+    const isbnInput = form ? form.elements['isbn'] : null;
+
+    if (isbnInput) isbnInput.readOnly = false;
+    if (form) form.reset();
+    currentEditIsbn = null;
+
     if (modal) {
         modal.style.display = 'none';
     }
 }
 
-// 提交新书表单
+// 提交新书或更新表单
 async function submitNewBookForm() {
     const form = document.getElementById('newBookForm');
     if (!form) return;
 
     const formData = new FormData(form);
+    const isEdit = currentEditIsbn !== null;
+
     const bookData = {
+        isbn: formData.get('isbn') || '',
         title: formData.get('title') || '',
         author: formData.get('author') || '',
-        isbn: formData.get('isbn') || '',
-        category: formData.get('category') || '',
-        stock: parseInt(formData.get('stock') || '1')
+        publisher: formData.get('publisher') || '',
+        publish_year: formData.get('publish_year') || '',
+        category_name: formData.get('category_name') || '',
+        description: formData.get('description') || '',
+        total_stock: parseInt(formData.get('total_stock') || '0'),
+        available_stock: parseInt(formData.get('available_stock') || formData.get('total_stock') || '0'),
+        price: formData.get('price') || '',
+        hot_score: parseFloat(formData.get('hot_score') || '0')
     };
 
-    // 简单验证
-    if (!bookData.title || !bookData.author || !bookData.isbn) {
-        showNotification('请填写必填字段: 标题、作者、ISBN', 'error');
+    if (!bookData.isbn || !bookData.title) {
+        showNotification('ISBN和标题不能为空', 'error');
         return;
     }
 
-    if (bookData.stock < 1) {
-        showNotification('库存数量必须大于0', 'error');
+    if (bookData.total_stock < 0 || bookData.available_stock < 0) {
+        showNotification('库存数量不能为负数', 'error');
+        return;
+    }
+
+    if (bookData.available_stock > bookData.total_stock) {
+        showNotification('可用库存不能大于总库存', 'error');
         return;
     }
 
     try {
-        showNotification('正在添加新书...', 'info');
+        showNotification(isEdit ? '正在更新图书...' : '正在添加新书...', 'info');
 
-        const bookPayload = {
-            isbn: bookData.isbn,
-            title: bookData.title,
-            author: bookData.author,
-            publisher: bookData.publisher || '',
-            category_name: bookData.category || '未分类',
-            total_stock: bookData.stock,
-            price: bookData.price || 0,
-            description: bookData.description || ''
-        };
+        let response;
+        if (isEdit) {
+            response = await fetch(`/api/hbase/books/${currentEditIsbn}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(bookData)
+            });
+        } else {
+            response = await fetch('/api/hbase/books', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(bookData)
+            });
+        }
 
-        const response = await fetch('/api/book/', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(bookPayload)
+        const result = await response.json();
+
+        if (response.ok) {
+            showNotification(isEdit ? '图书更新成功' : '新书添加成功', 'success');
+            closeNewBookModal();
+            loadBooksData();
+            loadBookStats();
+        } else {
+            showNotification(result.error || (isEdit ? '更新失败' : '添加失败'), 'error');
+        }
+    } catch (error) {
+        showNotification('操作失败: ' + error.message, 'error');
+    }
+}
+
+// 删除图书
+async function deleteBook(isbn) {
+    if (!isbn) return;
+
+    const confirmed = confirm(`确定要删除 ISBN 为 "${isbn}" 的图书吗？此操作不可撤销。`);
+    if (!confirmed) return;
+
+    try {
+        showNotification('正在删除图书...', 'info');
+
+        const response = await fetch(`/api/hbase/books/${isbn}`, {
+            method: 'DELETE'
         });
 
         const result = await response.json();
 
         if (response.ok) {
-            showNotification('新书添加成功', 'success');
-            closeNewBookModal();
-            form.reset();
+            showNotification('图书删除成功', 'success');
+            closeBookDetailModal();
             loadBooksData();
             loadBookStats();
         } else {
-            showNotification(result.error || '添加新书失败', 'error');
+            showNotification(result.error || '删除失败', 'error');
         }
-
     } catch (error) {
-        console.error('添加新书失败:', error);
-        showNotification('添加新书失败，请重试', 'error');
+        showNotification('删除失败: ' + error.message, 'error');
     }
 }
 

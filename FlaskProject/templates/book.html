@@ -194,6 +194,16 @@
             border: 1px solid var(--color-border);
         }
 
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+            border: none;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
         .btn-primary:hover {
             transform: translateY(-1px);
             box-shadow: 0 4px 12px rgba(122, 139, 110, 0.25);
@@ -471,6 +481,169 @@
             margin-top: 0;
         }
 
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--color-text-secondary);
+            padding: 0.25rem;
+            line-height: 1;
+        }
+
+        .modal-close:hover {
+            color: var(--color-text);
+        }
+
+        .book-detail-modal {
+            max-width: 600px;
+        }
+
+        .modal-body {
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .book-detail-header {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        .book-cover-large {
+            width: 120px;
+            height: 160px;
+            background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            flex-shrink: 0;
+        }
+
+        .book-main-info h3 {
+            font-size: 1.3rem;
+            margin: 0 0 0.5rem;
+            color: var(--color-text);
+        }
+
+        .book-main-info .author {
+            color: var(--color-text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .book-status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: var(--radius-full);
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .status-available {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-borrowed {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-unavailable {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .book-detail-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .detail-item {
+            background: var(--color-bg);
+            padding: 0.75rem 1rem;
+            border-radius: var(--radius-sm);
+        }
+
+        .detail-item.full-width {
+            grid-column: span 2;
+        }
+
+        .detail-label {
+            font-size: 0.8rem;
+            color: var(--color-text-secondary);
+            margin-bottom: 0.25rem;
+        }
+
+        .detail-value {
+            font-size: 1rem;
+            color: var(--color-text);
+            font-weight: 500;
+        }
+
+        .book-description {
+            background: var(--color-bg);
+            padding: 1rem;
+            border-radius: var(--radius-md);
+            margin-top: 1rem;
+        }
+
+        .book-description h4 {
+            margin: 0 0 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        .book-description p {
+            margin: 0;
+            color: var(--color-text-secondary);
+            line-height: 1.6;
+        }
+
+        .book-detail-actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--color-border);
+        }
+
+        .book-detail-actions .btn {
+            flex: 1;
+        }
+
+        @media (max-width: 480px) {
+            .book-detail-header {
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+            }
+
+            .book-detail-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .detail-item.full-width {
+                grid-column: span 1;
+            }
+        }
+
         .modal-content input,
         .modal-content select {
             width: 100%;
@@ -719,28 +892,55 @@
                 <button onclick="changePage(1)" id="nextPage">下一页</button>
             </div>
 
-            <!-- 添加新书模态框 -->
+            <!-- 添加/编辑图书模态框 -->
             <div id="newBookModal" class="modal-overlay">
                 <div class="modal-content">
                     <h2>添加新书</h2>
                     <form id="newBookForm">
                         <div style="display: grid; gap: 1rem;">
+                            <input type="text" name="isbn" placeholder="ISBN (不可修改)" required>
                             <input type="text" name="title" placeholder="图书标题" required>
                             <input type="text" name="author" placeholder="作者" required>
-                            <input type="text" name="isbn" placeholder="ISBN" required>
-                            <select name="category">
+                            <input type="text" name="publisher" placeholder="出版社">
+                            <input type="text" name="publish_year" placeholder="出版年份">
+                            <select name="category_name">
                                 <option value="">选择类别</option>
-                                <option value="computer">计算机</option>
-                                <option value="literature">文学</option>
-                                <option value="economy">经济管理</option>
+                                <option value="计算机">计算机</option>
+                                <option value="文学">文学</option>
+                                <option value="经济管理">经济管理</option>
+                                <option value="历史">历史</option>
+                                <option value="哲学">哲学</option>
+                                <option value="艺术">艺术</option>
+                                <option value="生活">生活</option>
+                                <option value="科技">科技</option>
                             </select>
-                            <input type="number" name="stock" placeholder="库存数量" min="1" required>
+                            <input type="number" name="total_stock" placeholder="总库存" min="0" value="1">
+                            <input type="number" name="available_stock" placeholder="可用库存" min="0" value="1">
+                            <input type="text" name="price" placeholder="价格">
+                            <input type="number" name="hot_score" placeholder="热门指数" min="0" step="0.1" value="0">
+                            <textarea name="description" placeholder="内容简介" rows="3"></textarea>
                         </div>
                         <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
                             <button type="button" class="btn btn-secondary" style="flex: 1;" onclick="closeNewBookModal()">取消</button>
-                            <button type="submit" class="btn btn-primary" style="flex: 1;">添加图书</button>
+                            <button type="submit" class="btn btn-primary" style="flex: 1;">保存</button>
                         </div>
                     </form>
+                </div>
+            </div>
+
+            <!-- 图书详情模态框 -->
+            <div id="bookDetailModal" class="modal-overlay" style="display: none; opacity: 0;">
+                <div class="modal-content book-detail-modal">
+                    <div class="modal-header">
+                        <h2>图书详情</h2>
+                        <button class="modal-close" onclick="closeBookDetailModal()">&times;</button>
+                    </div>
+                    <div id="bookDetailContent" class="modal-body">
+                        <div class="loading-container">
+                            <div class="loading-spinner"></div>
+                            <p>正在加载...</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </main>
@@ -751,6 +951,13 @@
         document.getElementById('sidebarToggle').addEventListener('click', function() {
             document.getElementById('sidebar').classList.toggle('collapsed');
         });
+
+        document.getElementById('bookDetailModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeBookDetailModal();
+            }
+        });
+
         function updateClock() {
             const now = new Date();
             document.getElementById('sidebarTime').textContent = now.toLocaleString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
