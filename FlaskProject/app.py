@@ -9,6 +9,26 @@ def create_app(config_name='default'):
 
     # 加载配置
     app.config.from_object(config[config_name])
+    
+    # 设置响应编码
+    @app.after_request
+    def after_request(response):
+        # 如果响应还没有设置 Content-Type，则设置默认值
+        if 'Content-Type' not in response.headers:
+            response.headers.add('Content-Type', 'text/html; charset=utf-8')
+        # 确保所有响应都包含字符编码
+        content_type = response.headers.get('Content-Type', '')
+        if 'charset=' not in content_type:
+            if 'application/json' in content_type:
+                response.headers['Content-Type'] = 'application/json; charset=utf-8'
+            else:
+                response.headers['Content-Type'] = content_type + '; charset=utf-8'
+        
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+        return response
+    
     # 初始化数据库
     db.init_app(app)
 
@@ -22,7 +42,7 @@ def create_app(config_name='default'):
     # 注册错误处理器
     register_error_handlers(app)
 
-    # 创建数据库表（开发环境）
+    # 创建数据库表（仅在表不存在时创建，不删除已有数据）
     with app.app_context():
         db.create_all()
 

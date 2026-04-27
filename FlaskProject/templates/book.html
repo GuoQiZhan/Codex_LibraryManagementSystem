@@ -725,16 +725,16 @@
                     <h2>添加新书</h2>
                     <form id="newBookForm">
                         <div style="display: grid; gap: 1rem;">
-                            <input type="text" placeholder="图书标题" required>
-                            <input type="text" placeholder="作者" required>
-                            <input type="text" placeholder="ISBN" required>
-                            <select>
+                            <input type="text" name="title" placeholder="图书标题" required>
+                            <input type="text" name="author" placeholder="作者" required>
+                            <input type="text" name="isbn" placeholder="ISBN" required>
+                            <select name="category">
                                 <option value="">选择类别</option>
                                 <option value="computer">计算机</option>
                                 <option value="literature">文学</option>
                                 <option value="economy">经济管理</option>
                             </select>
-                            <input type="number" placeholder="库存数量" min="1" required>
+                            <input type="number" name="stock" placeholder="库存数量" min="1" required>
                         </div>
                         <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
                             <button type="button" class="btn btn-secondary" style="flex: 1;" onclick="closeNewBookModal()">取消</button>

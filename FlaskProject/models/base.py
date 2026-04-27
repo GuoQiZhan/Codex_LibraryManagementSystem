@@ -7,7 +7,6 @@ class BaseModel(db.Model):
     """抽象基类，提供通用字段和方法"""
     __abstract__ = True
 
-    id = db.Column(db.Integer, primary_key=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -18,6 +17,10 @@ class BaseModel(db.Model):
             value = getattr(self, column.name)
             if isinstance(value, datetime):
                 value = value.isoformat()
+            # 处理 Decimal 类型
+            from decimal import Decimal
+            if isinstance(value, Decimal):
+                value = float(value)
             result[column.name] = value
         return result
 

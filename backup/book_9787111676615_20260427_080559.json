@@ -1,0 +1,18 @@
+{
+  "isbn": "9787111676615",
+  "title": "Python编程从入门到实践 (第3版)",
+  "author": "Eric Matthes",
+  "publisher": "机械工业出版社",
+  "publish_year": 2020,
+  "category_path": "计算机/编程语言/Python",
+  "category_name": "计算机",
+  "total_stock": 10,
+  "available_stock": 10,
+  "price": 109.0,
+  "hot_score": 0.0,
+  "borrow_count": 0,
+  "description": "Python编程入门经典书籍",
+  "created_at": "2026-04-27T08:05:59",
+  "updated_at": "2026-04-27T08:05:59",
+  "is_available": true
+}

@@ -766,10 +766,10 @@
                     <h2>办理图书借阅</h2>
                     <form id="borrowForm">
                         <div style="display: grid; gap: 1rem;">
-                            <input type="text" placeholder="读者ID或姓名" required>
-                            <input type="text" placeholder="图书ISBN或书名" required>
+                            <input type="text" name="reader_id" placeholder="读者ID或姓名" required>
+                            <input type="text" name="isbn" placeholder="图书ISBN或书名" required>
                             <div style="display: flex; gap: 1rem;">
-                                <input type="number" placeholder="借阅天数" min="1" max="30" value="14" style="flex: 1;">
+                                <input type="number" name="borrow_days" placeholder="借阅天数" min="1" max="30" value="14" style="flex: 1;">
                             </div>
                         </div>
                         <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
@@ -786,7 +786,7 @@
                     <h2>办理图书归还</h2>
                     <form id="returnForm">
                         <div style="display: grid; gap: 1rem;">
-                            <input type="text" placeholder="借阅记录ID" required>
+                            <input type="text" name="record_id" placeholder="借阅记录ID" required>
                             <div class="info-box">
                                 <p style="font-weight: 500; margin-bottom: 0.5rem;">借阅信息</p>
                                 <p>读者: <span id="returnReaderInfo">--</span></p>

@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
-from models import Book, SystemLog, db
+from models import SystemLog, db
+from models.dal import DAL
 
 book_bp = Blueprint('book', __name__, url_prefix='/api/book')
 
@@ -12,46 +13,22 @@ def get_books():
     category = request.args.get('category', '')
     author = request.args.get('author', '')
     available_only = request.args.get('available_only', 'false').lower() == 'true'
-
-    query = Book.query
-
-    if search:
-        query = query.filter(
-            (Book.isbn.contains(search)) |
-            (Book.title.contains(search)) |
-            (Book.author.contains(search))
-        )
-
-    if category:
-        query = query.filter(Book.category_path.contains(category))
-
-    if author:
-        query = query.filter(Book.author.contains(author))
-
-    if available_only:
-        query = query.filter(Book.available_stock > 0)
-
-    # 排序：按热度或标题
     sort_by = request.args.get('sort_by', 'hot_score')
     sort_order = request.args.get('sort_order', 'desc')
 
-    if sort_by == 'hot_score':
-        if sort_order == 'asc':
-            query = query.order_by(Book.hot_score.asc())
-        else:
-            query = query.order_by(Book.hot_score.desc())
-    elif sort_by == 'title':
-        if sort_order == 'asc':
-            query = query.order_by(Book.title.asc())
-        else:
-            query = query.order_by(Book.title.desc())
-    elif sort_by == 'borrow_count':
-        if sort_order == 'asc':
-            query = query.order_by(Book.borrow_count.asc())
-        else:
-            query = query.order_by(Book.borrow_count.desc())
+    books = DAL.get_books(
+        page=page,
+        per_page=per_page,
+        search=search,
+        category=category,
+        author=author,
+        available_only=available_only,
+        sort_by=sort_by,
+        sort_order=sort_order
+    )
 
-    books = query.paginate(page=page, per_page=per_page, error_out=False)
+    if books is None:
+        return jsonify({'error': '获取图书列表失败'}), 500
 
     return jsonify({
         'books': [book.to_dict() for book in books.items],
@@ -64,7 +41,7 @@ def get_books():
 @book_bp.route('/<isbn>', methods=['GET'])
 def get_book(isbn):
     """获取单本图书信息"""
-    book = Book.query.get(isbn)
+    book = DAL.get_book(isbn)
     if not book:
         return jsonify({'error': '图书不存在'}), 404
 
@@ -78,135 +55,75 @@ def create_book():
     if not data or 'isbn' not in data or 'title' not in data:
         return jsonify({'error': '缺少ISBN或书名'}), 400
 
-    # 检查图书是否已存在
-    if Book.query.get(data['isbn']):
-        return jsonify({'error': '图书ISBN已存在'}), 400
+    book, error = DAL.create_book(data)
+    if error:
+        return jsonify({'error': error}), 400
+    if not book:
+        return jsonify({'error': '创建图书失败'}), 500
 
-    book = Book(
-        isbn=data['isbn'],
-        title=data['title'],
-        author=data.get('author'),
-        total_stock=data.get('total_stock', 1)
-    )
-
-    # 设置其他字段
-    optional_fields = [
-        'publisher', 'publish_year', 'category_path',
-        'category_name', 'price', 'description'
-    ]
-
-    for field in optional_fields:
-        if field in data:
-            setattr(book, field, data[field])
-
-    try:
-        db.session.add(book)
-        db.session.commit()
-
-        # 记录日志
-        SystemLog.log_action(
-            user_id='system',
-            action_type='create_book',
-            target_type='book',
-            target_id=book.isbn,
-            details=data
-        )
-
-        return jsonify(book.to_dict()), 201
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+    return jsonify(book.to_dict()), 201
 
 @book_bp.route('/<isbn>', methods=['PUT'])
 def update_book(isbn):
     """更新图书信息"""
-    book = Book.query.get(isbn)
-    if not book:
-        return jsonify({'error': '图书不存在'}), 404
-
     data = request.get_json()
     if not data:
         return jsonify({'error': '无更新数据'}), 400
 
-    # 更新字段（不允许直接修改库存，使用专门接口）
-    updatable_fields = [
-        'title', 'author', 'publisher', 'publish_year',
-        'category_path', 'category_name', 'price', 'description'
-    ]
+    # 获取用户ID（这里简化处理，实际应该从认证信息中获取）
+    user_id = request.headers.get('X-User-ID', 'system')
 
-    updated = False
-    for field in updatable_fields:
-        if field in data:
-            setattr(book, field, data[field])
-            updated = True
+    book, error = DAL.update_book(isbn, data, user_id)
+    if error == "图书不存在":
+        return jsonify({'error': error}), 404
+    if error == "无权限执行此操作":
+        return jsonify({'error': error}), 403
+    if error:
+        return jsonify({'error': error}), 400
+    if not book:
+        return jsonify({'error': '更新图书失败'}), 500
 
-    # 特殊处理库存变更
-    if 'total_stock' in data:
-        stock_change = data['total_stock'] - book.total_stock
-        book.total_stock = data['total_stock']
-        book.available_stock += stock_change
-        updated = True
-
-    if updated:
-        try:
-            db.session.commit()
-
-            # 记录日志
-            SystemLog.log_action(
-                user_id='system',
-                action_type='update_book',
-                target_type='book',
-                target_id=book.isbn,
-                details=data
-            )
-
-            return jsonify(book.to_dict())
-        except Exception as e:
-            db.session.rollback()
-            return jsonify({'error': str(e)}), 500
-
-    return jsonify({'message': '无变更'})
+    return jsonify(book.to_dict())
 
 @book_bp.route('/<isbn>', methods=['DELETE'])
 def delete_book(isbn):
     """删除图书"""
-    book = Book.query.get(isbn)
-    if not book:
-        return jsonify({'error': '图书不存在'}), 404
+    # 获取用户ID（这里简化处理，实际应该从认证信息中获取）
+    user_id = request.headers.get('X-User-ID', 'system')
 
-    # 检查是否有未归还的借阅记录
-    from models import BorrowRecord
-    active_borrows = BorrowRecord.query.filter_by(
-        isbn=isbn,
-        status='borrowed'
-    ).count()
+    success, error = DAL.delete_book(isbn, user_id)
+    if error == "图书不存在":
+        return jsonify({'error': error}), 404
+    if error == "无权限执行此操作":
+        return jsonify({'error': error}), 403
+    if error:
+        return jsonify({'error': error}), 400
+    if not success:
+        return jsonify({'error': '删除图书失败'}), 500
 
-    if active_borrows > 0:
-        return jsonify({'error': '存在未归还的借阅记录，无法删除'}), 400
+    return jsonify({'message': '图书删除成功'})
 
-    try:
-        # 记录日志
-        SystemLog.log_action(
-            user_id='system',
-            action_type='delete_book',
-            target_type='book',
-            target_id=book.isbn
-        )
+@book_bp.route('/batch-delete', methods=['POST'])
+def batch_delete_books():
+    """批量删除图书"""
+    data = request.get_json()
+    if not data or 'isbns' not in data or not isinstance(data['isbns'], list):
+        return jsonify({'error': '缺少必要字段或格式错误'}), 400
 
-        db.session.delete(book)
-        db.session.commit()
-        return jsonify({'message': '图书删除成功'})
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+    # 获取用户ID（这里简化处理，实际应该从认证信息中获取）
+    user_id = request.headers.get('X-User-ID', 'system')
+
+    success, message = DAL.batch_delete_books(data['isbns'], user_id)
+    if message == "无权限执行此操作":
+        return jsonify({'error': message}), 403
+    if not success:
+        return jsonify({'error': message}), 500
+
+    return jsonify({'message': message})
 
 @book_bp.route('/<isbn>/stock', methods=['PUT'])
 def update_stock(isbn):
     """更新图书库存"""
-    book = Book.query.get(isbn)
-    if not book:
-        return jsonify({'error': '图书不存在'}), 404
-
     data = request.get_json()
     if 'action' not in data or 'quantity' not in data:
         return jsonify({'error': '缺少action或quantity字段'}), 400
@@ -214,36 +131,16 @@ def update_stock(isbn):
     action = data['action']
     quantity = int(data['quantity'])
 
-    if quantity <= 0:
-        return jsonify({'error': '数量必须为正数'}), 400
+    book, error = DAL.update_stock(isbn, action, quantity)
+    if error:
+        if error == "图书不存在":
+            return jsonify({'error': error}), 404
+        else:
+            return jsonify({'error': error}), 400
+    if not book:
+        return jsonify({'error': '更新库存失败'}), 500
 
-    if action == 'add':
-        book.total_stock += quantity
-        book.available_stock += quantity
-    elif action == 'remove':
-        if book.available_stock < quantity:
-            return jsonify({'error': '可用库存不足'}), 400
-        book.total_stock -= quantity
-        book.available_stock -= quantity
-    else:
-        return jsonify({'error': 'action必须为add或remove'}), 400
-
-    try:
-        db.session.commit()
-
-        # 记录日志
-        SystemLog.log_action(
-            user_id='system',
-            action_type='update_stock',
-            target_type='book',
-            target_id=book.isbn,
-            details={'action': action, 'quantity': quantity}
-        )
-
-        return jsonify(book.to_dict())
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+    return jsonify(book.to_dict())
 
 @book_bp.route('/categories', methods=['GET'])
 def get_categories():

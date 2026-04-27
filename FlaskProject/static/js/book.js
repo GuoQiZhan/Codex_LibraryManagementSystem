@@ -57,6 +57,18 @@ function initPageState() {
     };
 }
 
+// 缓存配置
+const CACHE_CONFIG = {
+    books: {
+        key: 'library_books_cache',
+        expiry: 5 * 60 * 1000 // 5分钟
+    },
+    bookStats: {
+        key: 'library_book_stats_cache',
+        expiry: 10 * 60 * 1000 // 10分钟
+    }
+};
+
 // 绑定事件监听器
 function bindEventListeners() {
     // 搜索框回车键支持
@@ -120,6 +132,28 @@ function bindEventListeners() {
 
 // 加载图书统计数据
 async function loadBookStats() {
+    // 尝试从缓存获取数据
+    const cachedStats = getFromCache(CACHE_CONFIG.bookStats.key);
+    if (cachedStats) {
+        // 使用缓存数据
+        if (window.statsCards.totalBooks) {
+            window.statsCards.totalBooks.textContent = cachedStats.total_books || 0;
+        }
+        if (window.statsCards.availableBooks) {
+            window.statsCards.availableBooks.textContent = cachedStats.available_stock || 0;
+        }
+        if (window.statsCards.borrowedBooks) {
+            window.statsCards.borrowedBooks.textContent = cachedStats.current_borrowed || 0;
+        }
+        if (window.statsCards.newBooks) {
+            window.statsCards.newBooks.textContent = cachedStats.new_books || 0;
+        }
+        return;
+    }
+    
+    // 显示加载状态
+    showLoading('bookStats');
+    
     try {
         const response = await fetch('/api/stats/overview');
         const data = await response.json();
@@ -141,10 +175,23 @@ async function loadBookStats() {
             // 暂时使用0或从popular_books推断
             window.statsCards.newBooks.textContent = 0;
         }
+        
+        // 缓存统计数据
+        const statsData = {
+            total_books: overview.total_books || 0,
+            available_stock: overview.available_stock || 0,
+            current_borrowed: overview.current_borrowed || 0,
+            new_books: 0
+        };
+        saveToCache(CACHE_CONFIG.bookStats.key, statsData, CACHE_CONFIG.bookStats.expiry);
 
     } catch (error) {
         console.error('加载图书统计数据失败:', error);
         showNotification('统计信息加载失败', 'error');
+    }
+    finally {
+        // 隐藏加载状态
+        // 注意：不需要调用hideLoading，因为数据加载后会直接更新内容
     }
 }
 
@@ -152,6 +199,23 @@ async function loadBookStats() {
 async function loadBooksData() {
     if (window.bookState.isLoading) return;
 
+    // 生成缓存键
+    const cacheKey = `${CACHE_CONFIG.books.key}_${window.bookState.currentPage}_${window.bookState.searchQuery}_${window.bookState.categoryFilter}_${window.bookState.statusFilter}`;
+    
+    // 尝试从缓存获取数据
+    const cachedBooks = getFromCache(cacheKey);
+    if (cachedBooks) {
+        // 使用缓存数据
+        window.bookState.totalPages = cachedBooks.pages || 1;
+        window.bookState.totalBooks = cachedBooks.total || 0;
+        updatePaginationUI();
+        updateBooksDisplay(cachedBooks.books || []);
+        return;
+    }
+
+    // 显示加载状态
+    showLoading('booksGrid');
+    
     try {
         window.bookState.isLoading = true;
 
@@ -185,6 +249,9 @@ async function loadBooksData() {
 
         // 根据当前视图更新图书展示
         updateBooksDisplay(data.books || []);
+        
+        // 缓存数据
+        saveToCache(cacheKey, data, CACHE_CONFIG.books.expiry);
 
     } catch (error) {
         console.error('加载图书数据失败:', error);
@@ -195,6 +262,7 @@ async function loadBooksData() {
 
     } finally {
         window.bookState.isLoading = false;
+        // 注意：不需要调用hideLoading，因为数据加载后会直接更新内容
     }
 }
 
@@ -502,14 +570,33 @@ function showMockBooks() {
 function borrowBook(bookId) {
     if (!bookId) return;
 
-    showNotification(`正在处理图书借阅: ${bookId}`, 'info');
+    const readerId = prompt('请输入读者ID：');
+    if (!readerId || !readerId.trim()) {
+        showNotification('请输入有效的读者ID', 'error');
+        return;
+    }
 
-    // 这里应该调用借阅API
-    setTimeout(() => {
-        showNotification('借阅请求已提交，请等待确认', 'success');
-        // 重新加载数据以更新状态
-        loadBooksData();
-    }, 1000);
+    showNotification('正在处理借阅请求...', 'info');
+
+    fetch('/api/borrow/apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reader_id: readerId.trim(), isbn: bookId })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.record_id) {
+            showNotification('借阅成功', 'success');
+            loadBooksData();
+            loadBookStats();
+        } else {
+            showNotification(data.error || '借阅失败', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('借阅请求失败:', error);
+        showNotification('借阅请求失败，请重试', 'error');
+    });
 }
 
 function viewBook(bookId) {
@@ -573,23 +660,34 @@ async function submitNewBookForm() {
     try {
         showNotification('正在添加新书...', 'info');
 
-        // 这里应该调用添加图书API
-        // const response = await fetch('/api/books', {
-        //     method: 'POST',
-        //     headers: { 'Content-Type': 'application/json' },
-        //     body: JSON.stringify(bookData)
-        // });
+        const bookPayload = {
+            isbn: bookData.isbn,
+            title: bookData.title,
+            author: bookData.author,
+            publisher: bookData.publisher || '',
+            category_name: bookData.category || '未分类',
+            total_stock: bookData.stock,
+            price: bookData.price || 0,
+            description: bookData.description || ''
+        };
 
-        // 模拟API调用
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        const response = await fetch('/api/book/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(bookPayload)
+        });
 
-        showNotification('新书添加成功', 'success');
-        closeNewBookModal();
-        form.reset();
+        const result = await response.json();
 
-        // 重新加载数据
-        loadBooksData();
-        loadBookStats();
+        if (response.ok) {
+            showNotification('新书添加成功', 'success');
+            closeNewBookModal();
+            form.reset();
+            loadBooksData();
+            loadBookStats();
+        } else {
+            showNotification(result.error || '添加新书失败', 'error');
+        }
 
     } catch (error) {
         console.error('添加新书失败:', error);
@@ -630,6 +728,53 @@ function showNotification(message, type = 'info') {
         notification.style.animation = 'slideOut 0.3s ease-out';
         setTimeout(() => notification.remove(), 300);
     }, 3000);
+}
+
+// 显示加载状态
+function showLoading(containerId) {
+    const container = document.getElementById(containerId);
+    if (container) {
+        container.innerHTML = '<div class="loading-container"><div class="loading-spinner"></div><p>加载中...</p></div>';
+    }
+}
+
+// 缓存相关函数
+function getFromCache(key) {
+    try {
+        const cached = localStorage.getItem(key);
+        if (!cached) return null;
+        
+        const parsed = JSON.parse(cached);
+        if (parsed.expiry < Date.now()) {
+            localStorage.removeItem(key);
+            return null;
+        }
+        
+        return parsed.data;
+    } catch (error) {
+        console.error('从缓存获取数据失败:', error);
+        return null;
+    }
+}
+
+function saveToCache(key, data, expiry) {
+    try {
+        const cacheItem = {
+            data: data,
+            expiry: Date.now() + expiry
+        };
+        localStorage.setItem(key, JSON.stringify(cacheItem));
+    } catch (error) {
+        console.error('保存数据到缓存失败:', error);
+    }
+}
+
+function clearCache(key) {
+    try {
+        localStorage.removeItem(key);
+    } catch (error) {
+        console.error('清除缓存失败:', error);
+    }
 }
 
 // 添加CSS动画

@@ -1,0 +1,14 @@
+{
+  "reader_id": "R20260001",
+  "name": "测试读者 (更新)",
+  "email": "test@example.com",
+  "phone": "13800138000",
+  "credit_score": 95,
+  "borrow_quota": 5,
+  "overdue_count": 0,
+  "total_borrow_count": 0,
+  "last_active": "2026-04-27T08:05:59",
+  "created_at": "2026-04-27T08:05:59",
+  "updated_at": "2026-04-27T08:05:59",
+  "can_borrow": true
+}

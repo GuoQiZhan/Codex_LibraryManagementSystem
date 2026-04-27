@@ -151,7 +151,7 @@ def get_borrow_trend():
                     key = str(stat.month)
                     borrow_map[key] = stat.count
         except Exception as e:
-            print(f"查询借阅记录失败: {e}")
+            pass
 
         # 查询归还记录
         try:
@@ -181,7 +181,7 @@ def get_borrow_trend():
                     key = str(stat.month)
                     return_map[key] = stat.count
         except Exception as e:
-            print(f"查询归还记录失败: {e}")
+            pass
 
         # 构建完整的时间序列数据
         dates = []
@@ -211,7 +211,6 @@ def get_borrow_trend():
             'data_source': 'actual'
         })
     except Exception as e:
-        print(f"获取借阅趋势数据失败: {e}")
         return jsonify({
             'dates': [],
             'borrow_counts': [],

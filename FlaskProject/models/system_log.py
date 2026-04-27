@@ -1,8 +1,8 @@
-from .base import db, BaseModel
+from .base import db
 from datetime import datetime
 import json
 
-class SystemLog(BaseModel):
+class SystemLog(db.Model):
     """系统日志模型"""
     __tablename__ = 'system_log'
 
@@ -15,6 +15,8 @@ class SystemLog(BaseModel):
     ip_address = db.Column(db.String(45))
     user_agent = db.Column(db.Text)
     details = db.Column(db.JSON)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     def __init__(self, user_id, action_type, target_type, target_id, ip_address=None, user_agent=None, details=None):
         self.user_id = user_id
@@ -36,5 +38,15 @@ class SystemLog(BaseModel):
             details=details
         )
         db.session.add(log)
-        db.session.commit()
+        # 不在这里提交事务，让调用者负责
         return log
+
+    def to_dict(self):
+        """将模型转换为字典"""
+        result = {}
+        for column in self.__table__.columns:
+            value = getattr(self, column.name)
+            if isinstance(value, datetime):
+                value = value.isoformat()
+            result[column.name] = value
+        return result

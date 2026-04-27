@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
-from models import Reader, SystemLog, db
+from models import SystemLog, db
+from models.dal import DAL
 from datetime import datetime
 
 reader_bp = Blueprint('reader', __name__, url_prefix='/api/reader')
@@ -11,16 +12,10 @@ def get_readers():
     per_page = request.args.get('per_page', 20, type=int)
     search = request.args.get('search', '')
 
-    query = Reader.query
+    readers = DAL.get_readers(page=page, per_page=per_page, search=search)
 
-    if search:
-        query = query.filter(
-            (Reader.reader_id.contains(search)) |
-            (Reader.name.contains(search)) |
-            (Reader.email.contains(search))
-        )
-
-    readers = query.paginate(page=page, per_page=per_page, error_out=False)
+    if readers is None:
+        return jsonify({'error': '获取读者列表失败'}), 500
 
     return jsonify({
         'readers': [reader.to_dict() for reader in readers.items],
@@ -33,7 +28,7 @@ def get_readers():
 @reader_bp.route('/<reader_id>', methods=['GET'])
 def get_reader(reader_id):
     """获取单个读者信息"""
-    reader = Reader.query.get(reader_id)
+    reader = DAL.get_reader(reader_id)
     if not reader:
         return jsonify({'error': '读者不存在'}), 404
 
@@ -47,114 +42,78 @@ def create_reader():
     if not data or 'reader_id' not in data or 'name' not in data:
         return jsonify({'error': '缺少必要字段'}), 400
 
-    # 检查读者ID是否已存在
-    if Reader.query.get(data['reader_id']):
-        return jsonify({'error': '读者ID已存在'}), 400
+    reader, error = DAL.create_reader(data)
+    if error:
+        return jsonify({'error': error}), 400
+    if not reader:
+        return jsonify({'error': '创建读者失败'}), 500
 
-    reader = Reader(
-        reader_id=data['reader_id'],
-        name=data['name'],
-        email=data.get('email'),
-        phone=data.get('phone')
-    )
-
-    # 可选：设置信用分和借阅额度
-    if 'credit_score' in data:
-        reader.credit_score = data['credit_score']
-    if 'borrow_quota' in data:
-        reader.borrow_quota = data['borrow_quota']
-
-    try:
-        db.session.add(reader)
-        db.session.commit()
-
-        # 记录日志
-        SystemLog.log_action(
-            user_id='system',
-            action_type='create_reader',
-            target_type='reader',
-            target_id=reader.reader_id,
-            details=data
-        )
-
-        return jsonify(reader.to_dict()), 201
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+    return jsonify(reader.to_dict()), 201
 
 @reader_bp.route('/<reader_id>', methods=['PUT'])
 def update_reader(reader_id):
     """更新读者信息"""
-    reader = Reader.query.get(reader_id)
-    if not reader:
-        return jsonify({'error': '读者不存在'}), 404
-
     data = request.get_json()
     if not data:
         return jsonify({'error': '无更新数据'}), 400
-
-    # 更新字段
-    updatable_fields = ['name', 'email', 'phone', 'credit_score', 'borrow_quota']
-    updated = False
-
-    for field in updatable_fields:
-        if field in data:
-            setattr(reader, field, data[field])
-            updated = True
-
-    if 'credit_score' in data:
-        reader.credit_score = max(60, min(100, data['credit_score']))
-
-    if updated:
-        reader.last_active = datetime.utcnow()
-        try:
-            db.session.commit()
-
-            # 记录日志
-            SystemLog.log_action(
-                user_id='system',
-                action_type='update_reader',
-                target_type='reader',
-                target_id=reader.reader_id,
-                details=data
-            )
-
-            return jsonify(reader.to_dict())
-        except Exception as e:
-            db.session.rollback()
-            return jsonify({'error': str(e)}), 500
-
-    return jsonify({'message': '无变更'})
+    
+    # 获取用户ID（这里简化处理，实际应该从认证信息中获取）
+    user_id = request.headers.get('X-User-ID', 'system')
+    
+    reader, error = DAL.update_reader(reader_id, data, user_id)
+    if error == "读者不存在":
+        return jsonify({'error': error}), 404
+    if error == "无权限执行此操作":
+        return jsonify({'error': error}), 403
+    if error:
+        return jsonify({'error': error}), 400
+    if not reader:
+        return jsonify({'error': '更新读者失败'}), 500
+    
+    return jsonify(reader.to_dict())
 
 @reader_bp.route('/<reader_id>', methods=['DELETE'])
 def delete_reader(reader_id):
     """删除读者"""
-    reader = Reader.query.get(reader_id)
-    if not reader:
-        return jsonify({'error': '读者不存在'}), 404
+    # 获取用户ID（这里简化处理，实际应该从认证信息中获取）
+    user_id = request.headers.get('X-User-ID', 'system')
+    
+    success, error = DAL.delete_reader(reader_id, user_id)
+    if error == "读者不存在":
+        return jsonify({'error': error}), 404
+    if error == "无权限执行此操作":
+        return jsonify({'error': error}), 403
+    if error:
+        return jsonify({'error': error}), 500
+    if not success:
+        return jsonify({'error': '删除读者失败'}), 500
+    
+    return jsonify({'message': '读者删除成功'})
 
-    try:
-        # 记录日志
-        SystemLog.log_action(
-            user_id='system',
-            action_type='delete_reader',
-            target_type='reader',
-            target_id=reader.reader_id
-        )
-
-        db.session.delete(reader)
-        db.session.commit()
-        return jsonify({'message': '读者删除成功'})
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+@reader_bp.route('/batch-delete', methods=['POST'])
+def batch_delete_readers():
+    """批量删除读者"""
+    data = request.get_json()
+    if not data or 'reader_ids' not in data or not isinstance(data['reader_ids'], list):
+        return jsonify({'error': '缺少必要字段或格式错误'}), 400
+    
+    # 获取用户ID（这里简化处理，实际应该从认证信息中获取）
+    user_id = request.headers.get('X-User-ID', 'system')
+    
+    success, message = DAL.batch_delete_readers(data['reader_ids'], user_id)
+    if message == "无权限执行此操作":
+        return jsonify({'error': message}), 403
+    if not success:
+        return jsonify({'error': message}), 500
+    
+    return jsonify({'message': message})
 
 @reader_bp.route('/<reader_id>/borrow-status', methods=['GET'])
 def get_borrow_status(reader_id):
     """获取读者借阅状态"""
     from models import BorrowRecord
 
-    reader = Reader.query.get(reader_id)
+    reader = DAL.get_reader(reader_id)
     if not reader:
         return jsonify({'error': '读者不存在'}), 404
 
