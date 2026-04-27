@@ -3,6 +3,8 @@ from .reader import Reader
 from .book import Book
 from .borrow import BorrowRecord, Reservation, Fine
 from .system_log import SystemLog
+from .dal import DAL
+from .hbase_dal import HBaseDAL, hbase_dal
 
 __all__ = [
     'db',
@@ -12,5 +14,8 @@ __all__ = [
     'BorrowRecord',
     'Reservation',
     'Fine',
-    'SystemLog'
+    'SystemLog',
+    'DAL',
+    'HBaseDAL',
+    'hbase_dal'
 ]

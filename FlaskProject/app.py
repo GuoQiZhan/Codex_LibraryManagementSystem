@@ -79,6 +79,10 @@ def register_frontend_routes(app):
     def stats_page():
         return render_template('stats.html')
 
+    @app.route('/hbase')
+    def hbase_page():
+        return render_template('hbase_books.html')
+
 def register_error_handlers(app):
     """注册错误处理器"""
 
