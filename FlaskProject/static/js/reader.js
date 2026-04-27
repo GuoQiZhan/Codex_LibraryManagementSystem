@@ -429,8 +429,8 @@ function saveReaderToDatabase(readerData) {
         // 显示成功提示
         alert('读者添加成功！');
         
-        // 清除缓存，确保下次加载最新数据
-        clearCache(CACHE_CONFIG.readers.key);
+        // 清除所有与读者相关的缓存（包括分页和搜索缓存）
+        clearAllReadersCache();
         
         // 刷新统计数据
         loadReaderStats();
@@ -443,6 +443,29 @@ function saveReaderToDatabase(readerData) {
         console.error('保存读者失败:', error);
         alert('保存失败: ' + error.message);
     });
+}
+
+// 清除所有读者相关缓存
+function clearAllReadersCache() {
+    try {
+        // 清除基础缓存键
+        localStorage.removeItem(CACHE_CONFIG.readers.key);
+        localStorage.removeItem(CACHE_CONFIG.readerStats.key);
+        
+        // 清除所有分页和搜索相关的缓存
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith(CACHE_CONFIG.readers.key)) {
+                keysToRemove.push(key);
+            }
+        }
+        keysToRemove.forEach(key => localStorage.removeItem(key));
+        
+        console.log('[缓存] 已清除所有读者相关缓存');
+    } catch (error) {
+        console.error('清除缓存失败:', error);
+    }
 }
 
 // 更新读者到数据库
@@ -476,8 +499,8 @@ function updateReaderToDatabase(readerId, updateData) {
         // 显示成功提示
         alert('读者更新成功！');
         
-        // 清除缓存，确保下次加载最新数据
-        clearCache(CACHE_CONFIG.readers.key);
+        // 清除所有与读者相关的缓存（包括分页和搜索缓存）
+        clearAllReadersCache();
         
         // 刷新统计数据
         loadReaderStats();
@@ -524,8 +547,8 @@ function deleteReader(readerId) {
         // 显示成功提示
         alert('读者删除成功！');
         
-        // 清除缓存，确保下次加载最新数据
-        clearCache(CACHE_CONFIG.readers.key);
+        // 清除所有与读者相关的缓存（包括分页和搜索缓存）
+        clearAllReadersCache();
         
         // 刷新统计数据
         loadReaderStats();

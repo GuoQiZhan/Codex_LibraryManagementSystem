@@ -1,0 +1,14 @@
+{
+  "reader_id": "R20263567",
+  "name": "QingLong Xiao",
+  "email": "xiaoqinglong0909@gmail.com",
+  "phone": "11111111111",
+  "credit_score": 80,
+  "borrow_quota": 5,
+  "overdue_count": 0,
+  "total_borrow_count": 0,
+  "last_active": "2026-04-27T12:25:56",
+  "created_at": "2026-04-27T12:25:56",
+  "updated_at": "2026-04-27T12:25:56",
+  "can_borrow": true
+}
