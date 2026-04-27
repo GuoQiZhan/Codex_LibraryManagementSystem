@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>页面未找到 - 智慧图书馆管理系统</title>
+    <link rel="stylesheet" href="/static/css/base.css">
+    <style>
+        body {
+            background: var(--bg-primary);
+            font-family: var(--font-family);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .error-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .error-icon {
+            font-size: 5rem;
+            color: var(--color-primary);
+            margin-bottom: 1.5rem;
+            opacity: 0.6;
+        }
+
+        .error-title {
+            font-size: 3rem;
+            color: var(--color-text);
+            margin: 0 0 0.5rem;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 700;
+        }
+
+        .error-message {
+            font-size: 1.1rem;
+            color: var(--color-text-secondary);
+            margin: 0 0 2rem;
+            max-width: 500px;
+            line-height: 1.6;
+        }
+
+        .error-actions {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 0.6rem 1.25rem;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.9rem;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-family: var(--font-family);
+        }
+
+        .btn-primary {
+            background: var(--gradient-primary);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--color-text);
+            border: 1px solid var(--color-border);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(155, 142, 196, 0.25);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--color-primary);
+            color: var(--color-primary);
+        }
+
+        @media (max-width: 768px) {
+            .error-title { font-size: 2.5rem; }
+            .error-icon { font-size: 4rem; }
+        }
+    </style>
+</head>
+<body>
+    <main class="error-container">
+        <div class="error-icon">🔍</div>
+        <h1 class="error-title">404</h1>
+        <p class="error-message">
+            抱歉，您访问的页面不存在或已被移动。<br>
+            请检查URL是否正确，或返回首页继续浏览。
+        </p>
+        <div class="error-actions">
+            <a href="/" class="btn btn-primary">返回首页</a>
+            <a href="javascript:history.back()" class="btn btn-secondary">返回上一页</a>
+            <a href="/dashboard" class="btn btn-secondary">前往仪表盘</a>
+        </div>
+    </main>
+</body>
+</html>

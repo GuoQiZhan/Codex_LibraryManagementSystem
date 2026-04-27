@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>借阅服务 - 智慧图书馆管理系统</title>
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/layout.css">
+    <style>
+        .page-header {
+            background: var(--gradient-header);
+            padding: 1.5rem 2rem;
+            border-radius: var(--radius-xl);
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--color-border);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .page-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--gradient-primary);
+        }
+
+        .page-title h1 {
+            font-size: 1.6rem;
+            color: var(--color-text);
+            margin: 0 0 0.25rem;
+            font-weight: 700;
+        }
+
+        .page-title p {
+            color: var(--color-text-secondary);
+            margin: 0;
+            font-size: 0.9rem;
+        }
+
+        .stats-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            background: var(--color-card-bg);
+            border-radius: var(--radius-lg);
+            padding: 1.25rem 1.5rem;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--color-border);
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            box-shadow: var(--shadow-hover);
+            transform: translateY(-2px);
+        }
+
+        .stat-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            color: var(--color-primary);
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--color-text);
+            margin: 0.25rem 0;
+        }
+
+        .stat-label {
+            color: var(--color-text-secondary);
+            font-size: 0.85rem;
+            margin: 0;
+        }
+
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .action-card {
+            background: var(--color-card-bg);
+            border-radius: var(--radius-lg);
+            padding: 1.25rem;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--color-border);
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .action-card:hover {
+            border-color: var(--color-primary);
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .action-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .action-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--color-text);
+            margin: 0 0 0.35rem;
+        }
+
+        .action-desc {
+            color: var(--color-text-secondary);
+            font-size: 0.8rem;
+            margin: 0;
+        }
+
+        .tabs-container {
+            background: var(--color-card-bg);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--color-border);
+            margin-bottom: 1.5rem;
+        }
+
+        .tabs-header {
+            display: flex;
+            background: var(--bg-secondary);
+            border-bottom: 2px solid var(--color-primary);
+            overflow-x: auto;
+        }
+
+        .tab-btn {
+            padding: 0.75rem 1.5rem;
+            background: none;
+            border: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--color-text-secondary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            position: relative;
+            font-family: var(--font-family);
+        }
+
+        .tab-btn:hover {
+            color: var(--color-primary);
+        }
+
+        .tab-btn.active {
+            color: var(--color-primary);
+        }
+
+        .tab-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: var(--gradient-primary);
+        }
+
+        .tab-content {
+            display: none;
+            padding: 1.25rem;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--color-border);
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 700px;
+        }
+
+        .data-table th {
+            background: var(--bg-secondary);
+            padding: 0.75rem 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: var(--color-text);
+            border-bottom: 2px solid var(--color-primary);
+            font-size: 0.85rem;
+        }
+
+        .data-table td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--color-border);
+            color: var(--color-text-secondary);
+            font-size: 0.85rem;
+        }
+
+        .data-table tr:hover {
+            background: var(--bg-secondary);
+        }
+
+        .data-table .action-buttons {
+            display: flex;
+            gap: 0.35rem;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .status-borrowed {
+            background: rgba(196, 163, 90, 0.1);
+            color: var(--color-warning);
+        }
+
+        .status-overdue {
+            background: rgba(196, 122, 122, 0.1);
+            color: var(--color-danger);
+        }
+
+        .status-returned {
+            background: rgba(107, 158, 122, 0.1);
+            color: var(--color-success);
+        }
+
+        .status-reserved {
+            background: rgba(122, 155, 190, 0.1);
+            color: var(--color-info);
+        }
+
+        .btn {
+            padding: 0.45rem 1rem;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.85rem;
+            font-family: var(--font-family);
+        }
+
+        .btn-primary {
+            background: var(--gradient-primary);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--color-text);
+            border: 1px solid var(--color-border);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(122, 139, 110, 0.25);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--color-primary);
+            color: var(--color-primary);
+        }
+
+        .btn-small {
+            padding: 0.35rem 0.65rem;
+            font-size: 0.8rem;
+        }
+
+        .search-filter-container {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .search-input {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-sm);
+            width: 260px;
+            font-size: 0.85rem;
+            font-family: var(--font-family);
+            color: var(--color-text);
+            transition: all 0.2s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px rgba(122, 139, 110, 0.1);
+        }
+
+        .filter-select {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-sm);
+            background: white;
+            color: var(--color-text);
+            font-size: 0.85rem;
+            font-family: var(--font-family);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .filter-select:focus {
+            outline: none;
+            border-color: var(--color-primary);
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            margin-top: 1.25rem;
+        }
+
+        .pagination button {
+            padding: 0.4rem 0.9rem;
+            border: 1px solid var(--color-border);
+            background: white;
+            border-radius: var(--radius-sm);
+            color: var(--color-text-secondary);
+            cursor: pointer;
+            transition: all 0.15s ease;
+            font-family: var(--font-family);
+            font-size: 0.85rem;
+        }
+
+        .pagination button:hover {
+            border-color: var(--color-primary);
+            color: var(--color-primary);
+        }
+
+        .pagination button.active {
+            background: var(--color-primary);
+            border-color: var(--color-primary);
+            color: white;
+        }
+
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: 1.5rem 2rem;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-content h2 {
+            color: var(--color-text);
+            margin-top: 0;
+        }
+
+        .modal-content input,
+        .modal-content select {
+            width: 100%;
+            padding: 0.6rem 0.75rem;
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-sm);
+            font-size: 0.9rem;
+            font-family: var(--font-family);
+            color: var(--color-text);
+            transition: all 0.2s ease;
+        }
+
+        .modal-content input:focus,
+        .modal-content select:focus {
+            outline: none;
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px rgba(122, 139, 110, 0.1);
+        }
+
+        .info-box {
+            background: var(--bg-secondary);
+            padding: 0.75rem 1rem;
+            border-radius: var(--radius-sm);
+        }
+
+        .info-box p {
+            margin: 0 0 0.35rem;
+            color: var(--color-text-secondary);
+            font-size: 0.85rem;
+        }
+
+        @media (max-width: 768px) {
+            .quick-actions {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .search-input {
+                width: 100%;
+            }
+
+            .search-filter-container {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .tabs-header {
+                flex-wrap: nowrap;
+            }
+
+            .tab-btn {
+                flex: 1;
+                text-align: center;
+                padding: 0.75rem 0.5rem;
+                font-size: 0.8rem;
+            }
+
+            .stats-cards {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .quick-actions {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-cards {
+                grid-template-columns: 1fr;
+            }
+
+            .data-table {
+                min-width: 600px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <span class="sidebar-logo-icon">📚</span>
+                <span class="sidebar-title">智慧图书馆</span>
+                <button class="sidebar-toggle" id="sidebarToggle" title="折叠导航">◀</button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-section-title">概览</div>
+                <a href="/" class="sidebar-nav-item">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-label">首页</span>
+                </a>
+                <a href="/dashboard" class="sidebar-nav-item">
+                    <span class="nav-icon">📊</span>
+                    <span class="nav-label">仪表盘</span>
+                </a>
+
+                <div class="nav-section-title">业务管理</div>
+                <a href="/reader" class="sidebar-nav-item">
+                    <span class="nav-icon">👥</span>
+                    <span class="nav-label">读者管理</span>
+                </a>
+                <a href="/book" class="sidebar-nav-item">
+                    <span class="nav-icon">📖</span>
+                    <span class="nav-label">图书管理</span>
+                </a>
+                <a href="/borrow" class="sidebar-nav-item active">
+                    <span class="nav-icon">🔄</span>
+                    <span class="nav-label">借阅服务</span>
+                </a>
+
+                <div class="nav-section-title">数据</div>
+                <a href="/stats" class="sidebar-nav-item">
+                    <span class="nav-icon">📈</span>
+                    <span class="nav-label">数据分析</span>
+                </a>
+                <a href="/admin" class="sidebar-nav-item">
+                    <span class="nav-icon">⚙️</span>
+                    <span class="nav-label">系统管理</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="sidebar-nav-item" style="cursor: default; color: var(--color-text-muted); font-size: 0.8rem;">
+                    <span class="nav-icon">⏱</span>
+                    <span class="nav-label" id="sidebarTime">--</span>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <div class="top-bar">
+                <div class="page-title-area">
+                    <h1>借阅服务中心</h1>
+                    <p>处理图书借阅、归还、续借等核心业务流程</p>
+                </div>
+            </div>
+
+            <section class="stats-cards fade-in-up">
+                <div class="stat-card">
+                    <div class="stat-icon">📖</div>
+                    <div class="stat-value" id="todayBorrows">0</div>
+                    <p class="stat-label">今日借阅</p>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">⏰</div>
+                    <div class="stat-value" id="dueToday">0</div>
+                    <p class="stat-label">今日到期</p>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">⚠️</div>
+                    <div class="stat-value" id="overdueCount">0</div>
+                    <p class="stat-label">逾期记录</p>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">📋</div>
+                    <div class="stat-value" id="pendingRenewals">0</div>
+                    <p class="stat-label">待处理续借</p>
+                </div>
+            </section>
+
+            <section class="quick-actions fade-in-up">
+                <div class="action-card" onclick="openBorrowModal()">
+                    <div class="action-icon">📖</div>
+                    <h3 class="action-title">图书借阅</h3>
+                    <p class="action-desc">为读者办理图书借阅手续</p>
+                </div>
+
+                <div class="action-card" onclick="openReturnModal()">
+                    <div class="action-icon">🔄</div>
+                    <h3 class="action-title">图书归还</h3>
+                    <p class="action-desc">处理图书归还，计算逾期费用</p>
+                </div>
+
+                <div class="action-card" onclick="openRenewModal()">
+                    <div class="action-icon">📅</div>
+                    <h3 class="action-title">续借申请</h3>
+                    <p class="action-desc">为读者办理图书续借手续</p>
+                </div>
+
+                <div class="action-card" onclick="openReservationModal()">
+                    <div class="action-icon">📌</div>
+                    <h3 class="action-title">预约管理</h3>
+                    <p class="action-desc">管理图书预约和到书通知</p>
+                </div>
+            </section>
+
+            <section class="tabs-container fade-in-up">
+                <div class="tabs-header">
+                    <button class="tab-btn active" data-tab="current">当前借阅</button>
+                    <button class="tab-btn" data-tab="overdue">逾期记录</button>
+                    <button class="tab-btn" data-tab="history">借阅历史</button>
+                    <button class="tab-btn" data-tab="reservations">图书预约</button>
+                </div>
+
+                <div class="tab-content active" id="currentTab">
+                    <div class="search-filter-container">
+                        <input type="text" class="search-input" placeholder="搜索读者ID、图书ISBN或书名...">
+                        <select class="filter-select" id="currentStatusFilter">
+                            <option value="">所有状态</option>
+                            <option value="borrowed">借阅中</option>
+                            <option value="due_soon">即将到期</option>
+                        </select>
+                        <button class="btn btn-primary" onclick="searchCurrentBorrows()">搜索</button>
+                        <button class="btn btn-secondary" onclick="resetCurrentFilters()">重置</button>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>借阅ID</th>
+                                    <th>读者</th>
+                                    <th>图书</th>
+                                    <th>借阅日期</th>
+                                    <th>应还日期</th>
+                                    <th>剩余天数</th>
+                                    <th>状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="currentBorrowsTable">
+                                <tr>
+                                    <td>BR20230001</td>
+                                    <td>张三 (R20230001)</td>
+                                    <td>Python编程从入门到实践</td>
+                                    <td>2026-04-15</td>
+                                    <td>2026-04-29</td>
+                                    <td>7</td>
+                                    <td><span class="status-badge status-borrowed">借阅中</span></td>
+                                    <td>
+                                        <div class="action-buttons">
+                                            <button class="btn btn-primary btn-small" onclick="processReturn('BR20230001')">归还</button>
+                                            <button class="btn btn-secondary btn-small" onclick="processRenew('BR20230001')">续借</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="pagination">
+                        <button onclick="changeBorrowPage(-1, 'current')" disabled id="prevCurrentPage">上一页</button>
+                        <div>
+                            <span id="currentBorrowPage">1</span> / <span id="totalCurrentPages">1</span>
+                        </div>
+                        <button onclick="changeBorrowPage(1, 'current')" id="nextCurrentPage">下一页</button>
+                    </div>
+                </div>
+
+                <div class="tab-content" id="overdueTab">
+                    <div class="search-filter-container">
+                        <input type="text" class="search-input" placeholder="搜索读者ID、图书ISBN...">
+                        <select class="filter-select" id="overdueDaysFilter">
+                            <option value="">所有逾期</option>
+                            <option value="1-7">1-7天</option>
+                            <option value="8-30">8-30天</option>
+                            <option value="30+">30天以上</option>
+                        </select>
+                        <button class="btn btn-primary" onclick="searchOverdueRecords()">搜索</button>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>借阅ID</th>
+                                    <th>读者</th>
+                                    <th>图书</th>
+                                    <th>应还日期</th>
+                                    <th>逾期天数</th>
+                                    <th>逾期费用</th>
+                                    <th>状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="overdueTable"></tbody>
+                        </table>
+                    </div>
+
+                    <div class="pagination">
+                        <button onclick="changeBorrowPage(-1, 'overdue')" disabled id="prevOverduePage">上一页</button>
+                        <div>
+                            <span id="overduePage">1</span> / <span id="totalOverduePages">1</span>
+                        </div>
+                        <button onclick="changeBorrowPage(1, 'overdue')" id="nextOverduePage">下一页</button>
+                    </div>
+                </div>
+
+                <div class="tab-content" id="historyTab">
+                    <div class="search-filter-container">
+                        <input type="text" class="search-input" placeholder="搜索读者ID、图书ISBN...">
+                        <select class="filter-select" id="historyTimeFilter">
+                            <option value="30days">最近30天</option>
+                            <option value="90days">最近90天</option>
+                            <option value="year">本年</option>
+                            <option value="all">全部历史</option>
+                        </select>
+                        <button class="btn btn-primary" onclick="searchBorrowHistory()">搜索</button>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>借阅ID</th>
+                                    <th>读者</th>
+                                    <th>图书</th>
+                                    <th>借阅日期</th>
+                                    <th>归还日期</th>
+                                    <th>借阅时长</th>
+                                    <th>状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historyTable"></tbody>
+                        </table>
+                    </div>
+
+                    <div class="pagination">
+                        <button onclick="changeBorrowPage(-1, 'history')" disabled id="prevHistoryPage">上一页</button>
+                        <div>
+                            <span id="historyPage">1</span> / <span id="totalHistoryPages">1</span>
+                        </div>
+                        <button onclick="changeBorrowPage(1, 'history')" id="nextHistoryPage">下一页</button>
+                    </div>
+                </div>
+
+                <div class="tab-content" id="reservationsTab">
+                    <div class="search-filter-container">
+                        <input type="text" class="search-input" placeholder="搜索读者ID、图书ISBN...">
+                        <select class="filter-select" id="reservationStatusFilter">
+                            <option value="">所有状态</option>
+                            <option value="pending">等待中</option>
+                            <option value="available">可领取</option>
+                            <option value="expired">已过期</option>
+                        </select>
+                        <button class="btn btn-primary" onclick="searchReservations()">搜索</button>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>预约ID</th>
+                                    <th>读者</th>
+                                    <th>图书</th>
+                                    <th>预约日期</th>
+                                    <th>预计到书日期</th>
+                                    <th>状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="reservationsTable"></tbody>
+                        </table>
+                    </div>
+
+                    <div class="pagination">
+                        <button onclick="changeBorrowPage(-1, 'reservations')" disabled id="prevReservationsPage">上一页</button>
+                        <div>
+                            <span id="reservationsPage">1</span> / <span id="totalReservationsPages">1</span>
+                        </div>
+                        <button onclick="changeBorrowPage(1, 'reservations')" id="nextReservationsPage">下一页</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 借阅模态框 -->
+            <div id="borrowModal" class="modal-overlay">
+                <div class="modal-content">
+                    <h2>办理图书借阅</h2>
+                    <form id="borrowForm">
+                        <div style="display: grid; gap: 1rem;">
+                            <input type="text" placeholder="读者ID或姓名" required>
+                            <input type="text" placeholder="图书ISBN或书名" required>
+                            <div style="display: flex; gap: 1rem;">
+                                <input type="number" placeholder="借阅天数" min="1" max="30" value="14" style="flex: 1;">
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                            <button type="button" class="btn btn-secondary" style="flex: 1;" onclick="closeBorrowModal()">取消</button>
+                            <button type="submit" class="btn btn-primary" style="flex: 1;">确认借阅</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 归还模态框 -->
+            <div id="returnModal" class="modal-overlay">
+                <div class="modal-content">
+                    <h2>办理图书归还</h2>
+                    <form id="returnForm">
+                        <div style="display: grid; gap: 1rem;">
+                            <input type="text" placeholder="借阅记录ID" required>
+                            <div class="info-box">
+                                <p style="font-weight: 500; margin-bottom: 0.5rem;">借阅信息</p>
+                                <p>读者: <span id="returnReaderInfo">--</span></p>
+                                <p>图书: <span id="returnBookInfo">--</span></p>
+                                <p>应还日期: <span id="returnDueDate">--</span></p>
+                                <p style="margin-bottom: 0;">逾期费用: <span id="returnFineAmount">0元</span></p>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                            <button type="button" class="btn btn-secondary" style="flex: 1;" onclick="closeReturnModal()">取消</button>
+                            <button type="submit" class="btn btn-primary" style="flex: 1;">确认归还</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/static/js/borrow.js"></script>
+    <script>
+        document.getElementById('sidebarToggle').addEventListener('click', function() {
+            document.getElementById('sidebar').classList.toggle('collapsed');
+        });
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('sidebarTime').textContent = now.toLocaleString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }
+        updateClock();
+        setInterval(updateClock, 1000);
+    </script>
+</body>
+</html>

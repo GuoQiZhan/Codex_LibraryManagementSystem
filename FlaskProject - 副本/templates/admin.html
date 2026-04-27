@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>系统管理 - 智慧图书馆管理系统</title>
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/layout.css">
+    <style>
+        /* 系统管理页面特定样式 */
+        .page-header {
+            background: linear-gradient(135deg, #FFFFFF 0%, #F8F8FF 100%);
+            padding: 2rem;
+            border-radius: 16px;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 20px rgba(230, 230, 250, 0.2);
+        }
+
+        .page-title h1 {
+            font-size: 2.2rem;
+            color: #333;
+            margin: 0 0 0.5rem;
+            background: linear-gradient(135deg, #D8BFD8 0%, #E6E6FA 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .page-title p {
+            color: #666;
+            margin: 0;
+        }
+
+        .system-status {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .status-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 15px rgba(230, 230, 250, 0.2);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .status-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 25px rgba(216, 191, 216, 0.3);
+        }
+
+        .status-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .status-icon {
+            font-size: 2rem;
+            color: #D8BFD8;
+        }
+
+        .status-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #333;
+            margin: 0;
+        }
+
+        .status-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #333;
+            margin: 0.5rem 0;
+        }
+
+        .status-label {
+            color: #666;
+            font-size: 0.9rem;
+            margin: 0;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .status-healthy {
+            background: rgba(72, 187, 120, 0.1);
+            color: #48BB78;
+        }
+
+        .status-warning {
+            background: rgba(245, 158, 11, 0.1);
+            color: #ED8936;
+        }
+
+        .status-error {
+            background: rgba(245, 101, 101, 0.1);
+            color: #F56565;
+        }
+
+        .management-sections {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .section-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(230, 230, 250, 0.2);
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+
+        .section-card:hover {
+            box-shadow: 0 8px 30px rgba(216, 191, 216, 0.3);
+        }
+
+        .section-header {
+            background: #F8F8FF;
+            padding: 1.5rem;
+            border-bottom: 2px solid #E6E6FA;
+        }
+
+        .section-header h2 {
+            font-size: 1.3rem;
+            color: #333;
+            margin: 0;
+        }
+
+        .section-content {
+            padding: 1.5rem;
+        }
+
+        .settings-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            background: #F8F8FF;
+            border-radius: 8px;
+            transition: background 0.2s ease;
+        }
+
+        .setting-item:hover {
+            background: #F0F0FF;
+        }
+
+        .setting-info h3 {
+            font-size: 1rem;
+            font-weight: 500;
+            color: #333;
+            margin: 0 0 0.3rem;
+        }
+
+        .setting-info p {
+            color: #666;
+            font-size: 0.9rem;
+            margin: 0;
+        }
+
+        .setting-control {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 26px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #E6E6FA;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #D8BFD8;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(24px);
+        }
+
+        .btn {
+            padding: 0.6rem 1.2rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #D8BFD8 0%, #E6E6FA 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #F8F8FF;
+            color: #666;
+            border: 2px solid #E6E6FA;
+        }
+
+        .btn-danger {
+            background: #F56565;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(216, 191, 216, 0.3);
+        }
+
+        .btn-secondary:hover {
+            border-color: #D8BFD8;
+            color: #D8BFD8;
+        }
+
+        .btn-danger:hover {
+            background: #E53E3E;
+        }
+
+        .btn-small {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.85rem;
+        }
+
+        .logs-container {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #E6E6FA;
+            border-radius: 8px;
+        }
+
+        .log-entry {
+            padding: 1rem;
+            border-bottom: 1px solid #F0F0F0;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+
+        .log-time {
+            color: #999;
+            margin-right: 1rem;
+        }
+
+        .log-level {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            margin-right: 0.5rem;
+        }
+
+        .log-level-info {
+            background: rgba(66, 153, 225, 0.1);
+            color: #4299E1;
+        }
+
+        .log-level-warning {
+            background: rgba(245, 158, 11, 0.1);
+            color: #ED8936;
+        }
+
+        .log-level-error {
+            background: rgba(245, 101, 101, 0.1);
+            color: #F56565;
+        }
+
+        .log-message {
+            color: #333;
+        }
+
+        .user-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .user-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.8rem 1rem;
+            background: #F8F8FF;
+            border-radius: 6px;
+            transition: background 0.2s ease;
+        }
+
+        .user-item:hover {
+            background: #F0F0FF;
+        }
+
+        .user-info h3 {
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: #333;
+            margin: 0 0 0.2rem;
+        }
+
+        .user-info p {
+            color: #666;
+            font-size: 0.85rem;
+            margin: 0;
+        }
+
+        .user-role {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            background: #E6E6FA;
+            color: #666;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            margin-left: 0.5rem;
+        }
+
+        .user-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .danger-zone {
+            background: linear-gradient(135deg, #FFFFFF 0%, #FFF5F5 100%);
+            border: 2px solid #FED7D7;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-top: 3rem;
+        }
+
+        .danger-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .danger-icon {
+            font-size: 2rem;
+            color: #F56565;
+        }
+
+        .danger-header h2 {
+            color: #333;
+            margin: 0;
+        }
+
+        .danger-actions {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        /* 导航栏样式 */
+        .nav-header {
+            background: white;
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 10px rgba(230, 230, 250, 0.2);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            margin-bottom: 2rem;
+        }
+
+        .nav-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #333;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .logo-icon {
+            color: #D8BFD8;
+        }
+
+        .main-nav {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .nav-link {
+            color: #666;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s ease;
+            position: relative;
+            padding: 0.5rem 0;
+        }
+
+        .nav-link:hover {
+            color: #D8BFD8;
+        }
+
+        .nav-link.active {
+            color: #D8BFD8;
+        }
+
+        .nav-link.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, #D8BFD8, #E6E6FA);
+            border-radius: 1px;
+        }
+
+        /* 模态框样式 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        /* 响应式调整 */
+        @media (max-width: 768px) {
+            .management-sections {
+                grid-template-columns: 1fr;
+            }
+
+            .system-status {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .main-nav {
+                display: none;
+            }
+
+            .nav-container {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .danger-actions {
+                flex-direction: column;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .system-status {
+                grid-template-columns: 1fr;
+            }
+
+            .setting-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+
+            .setting-control {
+                align-self: flex-end;
+            }
+        }
+
+        /* 动画效果 */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.6s ease-out;
+        }
+    </style>
+</head>
+<body>
+    <header class="nav-header">
+        <div class="nav-container">
+            <a href="/" class="logo">
+                <span class="logo-icon">📚</span>
+                <span>智慧图书馆</span>
+            </a>
+            <nav class="main-nav">
+                <a href="/" class="nav-link">首页</a>
+                <a href="/dashboard" class="nav-link">仪表盘</a>
+                <a href="/reader" class="nav-link">读者管理</a>
+                <a href="/book" class="nav-link">图书管理</a>
+                <a href="/borrow" class="nav-link">借阅服务</a>
+                <a href="/admin" class="nav-link active">系统管理</a>
+                <a href="/stats" class="nav-link">数据分析</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container" style="max-width: 1400px;">
+        <section class="page-header fade-in">
+            <div class="page-title">
+                <h1>系统管理中心</h1>
+                <p>管理系统配置、用户权限、系统日志和高级功能</p>
+            </div>
+        </section>
+
+        <section class="system-status fade-in">
+            <div class="status-card">
+                <div class="status-header">
+                    <h3 class="status-title">系统健康状态</h3>
+                    <div class="status-icon">💚</div>
+                </div>
+                <div class="status-value" id="systemHealth">良好</div>
+                <p class="status-label">所有服务运行正常</p>
+                <div class="status-badge status-healthy" id="healthBadge">正常</div>
+            </div>
+
+            <div class="status-card">
+                <div class="status-header">
+                    <h3 class="status-title">数据库连接</h3>
+                    <div class="status-icon">🗄️</div>
+                </div>
+                <div class="status-value" id="dbStatus">正常</div>
+                <p class="status-label">连接池: <span id="dbConnections">5/10</span></p>
+            </div>
+
+            <div class="status-card">
+                <div class="status-header">
+                    <h3 class="status-title">磁盘使用率</h3>
+                    <div class="status-icon">💾</div>
+                </div>
+                <div class="status-value" id="diskUsage">24%</div>
+                <p class="status-label">剩余空间: <span id="freeSpace">186GB</span></p>
+                <div class="status-badge status-healthy">充足</div>
+            </div>
+
+            <div class="status-card">
+                <div class="status-header">
+                    <h3 class="status-title">系统运行时间</h3>
+                    <div class="status-icon">⏱️</div>
+                </div>
+                <div class="status-value" id="uptime">15天</div>
+                <p class="status-label">最后重启: <span id="lastRestart">2026-04-07</span></p>
+            </div>
+        </section>
+
+        <section class="management-sections fade-in">
+            <div class="section-card">
+                <div class="section-header">
+                    <h2>系统设置</h2>
+                </div>
+                <div class="section-content">
+                    <div class="settings-list">
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h3>自动备份</h3>
+                                <p>每天凌晨3点自动备份数据库</p>
+                            </div>
+                            <div class="setting-control">
+                                <label class="switch">
+                                    <input type="checkbox" id="autoBackup" checked>
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h3>借阅逾期通知</h3>
+                                <p>提前3天发送借阅到期提醒</p>
+                            </div>
+                            <div class="setting-control">
+                                <label class="switch">
+                                    <input type="checkbox" id="overdueNotification" checked>
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h3>新读者审核</h3>
+                                <p>新注册读者需要管理员审核</p>
+                            </div>
+                            <div class="setting-control">
+                                <label class="switch">
+                                    <input type="checkbox" id="newReaderReview">
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h3>日志保留时长</h3>
+                                <p>系统操作日志保留时间</p>
+                            </div>
+                            <div class="setting-control">
+                                <select class="btn-secondary" style="padding: 0.4rem 0.8rem;" id="logRetention">
+                                    <option value="30">30天</option>
+                                    <option value="90" selected>90天</option>
+                                    <option value="180">180天</option>
+                                    <option value="365">1年</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h3>借阅最大天数</h3>
+                                <p>读者单次最大借阅天数</p>
+                            </div>
+                            <div class="setting-control">
+                                <input type="number" min="1" max="90" value="30" style="width: 80px; padding: 0.4rem; border: 2px solid #E6E6FA; border-radius: 6px;" id="maxBorrowDays">
+                                <span style="color: #666; margin-left: 0.5rem;">天</span>
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 1rem; display: flex; gap: 1rem;">
+                            <button class="btn btn-secondary" onclick="resetSettings()">重置设置</button>
+                            <button class="btn btn-primary" onclick="saveSettings()">保存设置</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-card">
+                <div class="section-header">
+                    <h2>用户管理</h2>
+                </div>
+                <div class="section-content">
+                    <div class="user-list">
+                        <div class="user-item">
+                            <div class="user-info">
+                                <h3>管理员 <span class="user-role">超级管理员</span></h3>
+                                <p>admin@library.com</p>
+                            </div>
+                            <div class="user-actions">
+                                <button class="btn btn-secondary btn-small" onclick="editUser('admin')">编辑</button>
+                                <button class="btn btn-secondary btn-small" onclick="changePassword('admin')">改密</button>
+                            </div>
+                        </div>
+
+                        <div class="user-item">
+                            <div class="user-info">
+                                <h3>图书馆员 <span class="user-role">普通管理员</span></h3>
+                                <p>librarian1@library.com</p>
+                            </div>
+                            <div class="user-actions">
+                                <button class="btn btn-secondary btn-small" onclick="editUser('librarian1')">编辑</button>
+                                <button class="btn btn-secondary btn-small" onclick="changePassword('librarian1')">改密</button>
+                            </div>
+                        </div>
+
+                        <div class="user-item">
+                            <div class="user-info">
+                                <h3>图书管理员 <span class="user-role">数据录入员</span></h3>
+                                <p>dataentry@library.com</p>
+                            </div>
+                            <div class="user-actions">
+                                <button class="btn btn-secondary btn-small" onclick="editUser('dataentry')">编辑</button>
+                                <button class="btn btn-secondary btn-small" onclick="changePassword('dataentry')">改密</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 1.5rem; display: flex; gap: 1rem;">
+                        <button class="btn btn-primary" onclick="addNewUser()">
+                            <span>+</span> 添加新用户
+                        </button>
+                        <button class="btn btn-secondary" onclick="manageRoles()">
+                            <span>👥</span> 角色管理
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-card">
+                <div class="section-header">
+                    <h2>系统日志</h2>
+                </div>
+                <div class="section-content">
+                    <div class="logs-container" id="systemLogs">
+                        <div class="log-entry">
+                            <span class="log-time">2026-04-22 14:30:22</span>
+                            <span class="log-level log-level-info">INFO</span>
+                            <span class="log-message">用户 "管理员" 登录系统</span>
+                        </div>
+                        <div class="log-entry">
+                            <span class="log-time">2026-04-22 14:25:10</span>
+                            <span class="log-level log-level-info">INFO</span>
+                            <span class="log-message">自动备份任务执行成功</span>
+                        </div>
+                        <div class="log-entry">
+                            <span class="log-time">2026-04-22 13:45:33</span>
+                            <span class="log-level log-level-info">INFO</span>
+                            <span class="log-message">读者 "张三" 借阅图书 "Python编程从入门到实践"</span>
+                        </div>
+                        <div class="log-entry">
+                            <span class="log-time">2026-04-22 12:15:07</span>
+                            <span class="log-level log-level-warning">WARN</span>
+                            <span class="log-message">系统磁盘空间使用率超过20%，请注意清理</span>
+                        </div>
+                        <div class="log-entry">
+                            <span class="log-time">2026-04-22 10:05:48</span>
+                            <span class="log-level log-level-error">ERROR</span>
+                            <span class="log-message">数据库连接超时，已自动重连</span>
+                        </div>
+                        <div class="log-entry">
+                            <span class="log-time">2026-04-22 09:30:15</span>
+                            <span class="log-level log-level-info">INFO</span>
+                            <span class="log-message">系统启动完成，所有服务运行正常</span>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 1rem; display: flex; gap: 1rem;">
+                        <button class="btn btn-secondary" onclick="refreshLogs()">刷新日志</button>
+                        <button class="btn btn-secondary" onclick="clearLogs()">清空日志</button>
+                        <button class="btn btn-secondary" onclick="exportLogs()">导出日志</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-card">
+                <div class="section-header">
+                    <h2>数据管理</h2>
+                </div>
+                <div class="section-content">
+                    <div style="display: grid; gap: 1rem;">
+                        <div>
+                            <h3 style="margin: 0 0 0.5rem; font-size: 1rem; color: #333;">数据库备份</h3>
+                            <p style="color: #666; font-size: 0.9rem; margin: 0 0 1rem;">定期备份数据库以防止数据丢失</p>
+                            <div style="display: flex; gap: 1rem;">
+                                <button class="btn btn-primary" onclick="createBackup()">立即备份</button>
+                                <button class="btn btn-secondary" onclick="viewBackups()">查看备份</button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h3 style="margin: 0 0 0.5rem; font-size: 1rem; color: #333;">数据清理</h3>
+                            <p style="color: #666; font-size: 0.9rem; margin: 0 0 1rem;">清理过期日志和临时数据</p>
+                            <div style="display: flex; gap: 1rem;">
+                                <button class="btn btn-secondary" onclick="cleanOldLogs()">清理过期日志</button>
+                                <button class="btn btn-secondary" onclick="cleanTempFiles()">清理临时文件</button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h3 style="margin: 0 0 0.5rem; font-size: 1rem; color: #333;">数据导出</h3>
+                            <p style="color: #666; font-size: 0.9rem; margin: 0 0 1rem;">导出系统数据用于分析或迁移</p>
+                            <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                                <button class="btn btn-secondary" onclick="exportBooks()">导出图书数据</button>
+                                <button class="btn btn-secondary" onclick="exportReaders()">导出读者数据</button>
+                                <button class="btn btn-secondary" onclick="exportBorrowRecords()">导出借阅记录</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="danger-zone fade-in">
+            <div class="danger-header">
+                <div class="danger-icon">⚠️</div>
+                <div>
+                    <h2>危险操作区</h2>
+                    <p style="color: #666; margin: 0.5rem 0 0;">这些操作可能会对系统造成不可逆的影响</p>
+                </div>
+            </div>
+
+            <div class="danger-actions">
+                <button class="btn btn-danger" onclick="systemRestart()" style="background: #F56565; color: white;">
+                    🔄 重启系统
+                </button>
+                <button class="btn btn-danger" onclick="resetDatabase()" style="background: #9B2C2C; color: white;">
+                    💥 重置数据库
+                </button>
+                <button class="btn btn-danger" onclick="clearAllData()" style="background: #742A2A; color: white;">
+                    🗑️ 清空所有数据
+                </button>
+                <button class="btn btn-danger" onclick="deleteSystem()" style="background: #63171B; color: white;">
+                    ⚡ 删除系统
+                </button>
+            </div>
+
+            <p style="color: #999; font-size: 0.9rem; margin-top: 1.5rem;">
+                <strong>注意：</strong>执行危险操作前请确保已进行数据备份，这些操作需要管理员权限确认。
+            </p>
+        </section>
+    </main>
+
+    <!-- 用户管理模态框 -->
+    <div id="userModal" class="modal-overlay">
+        <div class="modal-content">
+            <h2 style="margin-top: 0;">用户管理</h2>
+            <form id="userForm">
+                <div style="display: grid; gap: 1rem;">
+                    <input type="text" placeholder="用户名" required style="padding: 0.8rem; border: 2px solid #E6E6FA; border-radius: 8px;">
+                    <input type="email" placeholder="邮箱" required style="padding: 0.8rem; border: 2px solid #E6E6FA; border-radius: 8px;">
+                    <select style="padding: 0.8rem; border: 2px solid #E6E6FA; border-radius: 8px;">
+                        <option value="">选择角色</option>
+                        <option value="admin">超级管理员</option>
+                        <option value="librarian">图书馆员</option>
+                        <option value="dataentry">数据录入员</option>
+                    </select>
+                </div>
+                <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                    <button type="button" class="btn-secondary" style="flex: 1;" onclick="closeUserModal()">取消</button>
+                    <button type="submit" class="btn-primary" style="flex: 1;">保存用户</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 确认模态框 -->
+    <div id="confirmModal" class="modal-overlay">
+        <div class="modal-content">
+            <h2 style="margin-top: 0; color: #F56565;" id="confirmTitle">确认操作</h2>
+            <p id="confirmMessage" style="margin: 1rem 0;">您确定要执行此操作吗？</p>
+            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                <button class="btn-secondary" style="flex: 1;" onclick="closeConfirmModal()">取消</button>
+                <button class="btn-danger" style="flex: 1;" id="confirmActionBtn">确认执行</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/admin.js"></script>
+</body>
+</html>

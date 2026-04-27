@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>服务器错误 - 智慧图书馆管理系统</title>
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/layout.css">
+    <style>
+        .error-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 70vh;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .error-icon {
+            font-size: 6rem;
+            color: #F56565;
+            margin-bottom: 2rem;
+        }
+
+        .error-title {
+            font-size: 3rem;
+            color: #333;
+            margin: 0 0 1rem;
+            background: linear-gradient(135deg, #F56565 0%, #FC8181 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .error-message {
+            font-size: 1.2rem;
+            color: #666;
+            margin: 0 0 2rem;
+            max-width: 600px;
+            line-height: 1.6;
+        }
+
+        .error-details {
+            background: #FFF5F5;
+            border: 1px solid #FED7D7;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            max-width: 800px;
+            text-align: left;
+            font-family: monospace;
+            font-size: 0.9rem;
+            color: #742A2A;
+            overflow-x: auto;
+            display: none;
+        }
+
+        .error-actions {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #D8BFD8 0%, #E6E6FA 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #F8F8FF;
+            color: #666;
+            border: 2px solid #E6E6FA;
+        }
+
+        .btn-danger {
+            background: #F56565;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(216, 191, 216, 0.3);
+        }
+
+        .btn-secondary:hover {
+            border-color: #D8BFD8;
+            color: #D8BFD8;
+        }
+
+        .btn-danger:hover {
+            background: #E53E3E;
+        }
+
+        .toggle-details {
+            color: #F56565;
+            text-decoration: underline;
+            cursor: pointer;
+            font-size: 0.9rem;
+            margin-top: 1rem;
+            display: inline-block;
+        }
+
+        .toggle-details:hover {
+            color: #E53E3E;
+        }
+
+        @media (max-width: 768px) {
+            .error-title {
+                font-size: 2.5rem;
+            }
+
+            .error-icon {
+                font-size: 4rem;
+            }
+
+            .error-message {
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="nav-header">
+        <div class="nav-container">
+            <a href="/" class="logo">
+                <span class="logo-icon">📚</span>
+                <span>智慧图书馆</span>
+            </a>
+            <nav class="main-nav">
+                <a href="/" class="nav-link">首页</a>
+                <a href="/dashboard" class="nav-link">仪表盘</a>
+                <a href="/reader" class="nav-link">读者管理</a>
+                <a href="/book" class="nav-link">图书管理</a>
+                <a href="/borrow" class="nav-link">借阅服务</a>
+                <a href="/admin" class="nav-link">系统管理</a>
+                <a href="/stats" class="nav-link">数据分析</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container" style="max-width: 1200px;">
+        <section class="error-container">
+            <div class="error-icon">💥</div>
+            <h1 class="error-title">500</h1>
+            <p class="error-message">
+                抱歉，服务器内部发生错误。<br>
+                我们的技术团队已收到通知，正在紧急处理中。<br>
+                请稍后重试，或联系系统管理员。
+            </p>
+
+            <div id="errorDetails" class="error-details">
+                <!-- 错误详情将由JavaScript动态填充 -->
+            </div>
+
+            <a href="javascript:void(0)" class="toggle-details" onclick="toggleErrorDetails()">显示错误详情</a>
+
+            <div class="error-actions">
+                <a href="/" class="btn btn-primary">返回首页</a>
+                <a href="javascript:history.back()" class="btn btn-secondary">返回上一页</a>
+                <a href="mailto:admin@library.com" class="btn btn-danger">联系管理员</a>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // 设置当前导航链接为活动状态
+        document.addEventListener('DOMContentLoaded', function() {
+            const currentPath = window.location.pathname;
+            const navLinks = document.querySelectorAll('.nav-link');
+            navLinks.forEach(link => {
+                if (link.getAttribute('href') === currentPath) {
+                    link.classList.add('active');
+                }
+            });
+
+            // 尝试获取错误信息（如果由Flask传递）
+            const errorDetails = document.getElementById('errorDetails');
+            const urlParams = new URLSearchParams(window.location.search);
+            const errorParam = urlParams.get('error');
+
+            if (errorParam) {
+                errorDetails.textContent = decodeURIComponent(errorParam);
+            } else {
+                // 如果没有错误参数，显示通用信息
+                errorDetails.textContent = '错误时间: ' + new Date().toLocaleString() + '\n';
+                errorDetails.textContent += '错误类型: 服务器内部错误\n';
+                errorDetails.textContent += '建议操作: 请刷新页面或稍后重试\n';
+                errorDetails.textContent += '如果问题持续存在，请联系系统管理员。';
+            }
+        });
+
+        function toggleErrorDetails() {
+            const details = document.getElementById('errorDetails');
+            const toggle = document.querySelector('.toggle-details');
+
+            if (details.style.display === 'block') {
+                details.style.display = 'none';
+                toggle.textContent = '显示错误详情';
+            } else {
+                details.style.display = 'block';
+                toggle.textContent = '隐藏错误详情';
+            }
+        }
+    </script>
+</body>
+</html>

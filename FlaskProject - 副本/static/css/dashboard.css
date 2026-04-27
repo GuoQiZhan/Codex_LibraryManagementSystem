@@ -1,0 +1,22 @@
+/* 大屏专用样式 */
+.dashboard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem;
+  background-color: var(--secondary-color);
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.dashboard h1 {
+  font-size: 2rem;
+  color: var(--accent-color);
+  margin-bottom: 1rem;
+}
+
+.dashboard .chart {
+  width: 100%;
+  max-width: 800px;
+  height: 400px;
+}

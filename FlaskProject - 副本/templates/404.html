@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>页面未找到 - 智慧图书馆管理系统</title>
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/layout.css">
+    <style>
+        .error-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 70vh;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .error-icon {
+            font-size: 6rem;
+            color: #D8BFD8;
+            margin-bottom: 2rem;
+        }
+
+        .error-title {
+            font-size: 3rem;
+            color: #333;
+            margin: 0 0 1rem;
+            background: linear-gradient(135deg, #D8BFD8 0%, #E6E6FA 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .error-message {
+            font-size: 1.2rem;
+            color: #666;
+            margin: 0 0 2rem;
+            max-width: 600px;
+            line-height: 1.6;
+        }
+
+        .error-actions {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #D8BFD8 0%, #E6E6FA 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #F8F8FF;
+            color: #666;
+            border: 2px solid #E6E6FA;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(216, 191, 216, 0.3);
+        }
+
+        .btn-secondary:hover {
+            border-color: #D8BFD8;
+            color: #D8BFD8;
+        }
+
+        @media (max-width: 768px) {
+            .error-title {
+                font-size: 2.5rem;
+            }
+
+            .error-icon {
+                font-size: 4rem;
+            }
+
+            .error-message {
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="nav-header">
+        <div class="nav-container">
+            <a href="/" class="logo">
+                <span class="logo-icon">📚</span>
+                <span>智慧图书馆</span>
+            </a>
+            <nav class="main-nav">
+                <a href="/" class="nav-link">首页</a>
+                <a href="/dashboard" class="nav-link">仪表盘</a>
+                <a href="/reader" class="nav-link">读者管理</a>
+                <a href="/book" class="nav-link">图书管理</a>
+                <a href="/borrow" class="nav-link">借阅服务</a>
+                <a href="/admin" class="nav-link">系统管理</a>
+                <a href="/stats" class="nav-link">数据分析</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container" style="max-width: 1200px;">
+        <section class="error-container">
+            <div class="error-icon">🔍</div>
+            <h1 class="error-title">404</h1>
+            <p class="error-message">
+                抱歉，您访问的页面不存在或已被移动。<br>
+                请检查URL是否正确，或返回首页继续浏览。
+            </p>
+            <div class="error-actions">
+                <a href="/" class="btn btn-primary">返回首页</a>
+                <a href="javascript:history.back()" class="btn btn-secondary">返回上一页</a>
+                <a href="/dashboard" class="btn btn-secondary">前往仪表盘</a>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // 设置当前导航链接为活动状态
+        document.addEventListener('DOMContentLoaded', function() {
+            const currentPath = window.location.pathname;
+            const navLinks = document.querySelectorAll('.nav-link');
+            navLinks.forEach(link => {
+                if (link.getAttribute('href') === currentPath) {
+                    link.classList.add('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

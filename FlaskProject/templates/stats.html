@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据分析 - 智慧图书馆管理系统</title>
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        .stats-header {
+            background: var(--gradient-header);
+            padding: 1.5rem 2rem;
+            border-radius: var(--radius-xl);
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--color-border);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stats-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--gradient-primary);
+        }
+
+        .stats-title h1 {
+            font-size: 1.6rem;
+            color: var(--color-text);
+            margin: 0;
+            font-weight: 700;
+        }
+
+        .stats-title p {
+            color: var(--color-text-secondary);
+            margin: 0.25rem 0 0;
+            font-size: 0.9rem;
+        }
+
+        .stats-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .metric-card {
+            background: var(--color-card-bg);
+            padding: 1rem 1.25rem;
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--color-border);
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .metric-value {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--color-primary);
+            margin: 0 0 0.25rem;
+        }
+
+        .metric-label {
+            color: var(--color-text-secondary);
+            font-size: 0.85rem;
+            margin: 0;
+        }
+
+        .metric-change {
+            font-size: 0.8rem;
+            margin-top: 0.35rem;
+            padding: 0.15rem 0.6rem;
+            border-radius: 12px;
+            display: inline-block;
+        }
+
+        .metric-change.positive {
+            background: rgba(107, 158, 122, 0.1);
+            color: var(--color-success);
+        }
+
+        .metric-change.negative {
+            background: rgba(196, 122, 122, 0.1);
+            color: var(--color-danger);
+        }
+
+        .filters-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+            background: var(--color-card-bg);
+            padding: 1.25rem 1.5rem;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--color-border);
+        }
+
+        .filter-group label {
+            display: block;
+            font-weight: 500;
+            color: var(--color-text-secondary);
+            font-size: 0.8rem;
+            margin-bottom: 0.35rem;
+        }
+
+        .filter-group select,
+        .filter-group input {
+            width: 100%;
+            padding: 0.5rem 0.75rem;
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-sm);
+            background: white;
+            color: var(--color-text);
+            font-size: 0.85rem;
+            transition: all 0.2s ease;
+            font-family: var(--font-family);
+        }
+
+        .filter-group select:focus,
+        .filter-group input:focus {
+            outline: none;
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px rgba(122, 139, 110, 0.1);
+        }
+
+        .filter-actions {
+            display: flex;
+            gap: 0.75rem;
+            align-items: flex-end;
+        }
+
+        .charts-section {
+            margin: 2rem 0;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        .section-title {
+            font-size: 1.3rem;
+            color: var(--color-text);
+            margin: 0;
+            font-weight: 600;
+        }
+
+        .section-description {
+            color: var(--color-text-secondary);
+            margin: 0.25rem 0 0;
+            font-size: 0.9rem;
+        }
+
+        .section-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .section-actions button {
+            padding: 0.4rem 0.75rem;
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-sm);
+            background: white;
+            color: var(--color-text-secondary);
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            font-family: var(--font-family);
+        }
+
+        .section-actions button:hover {
+            border-color: var(--color-primary);
+            color: var(--color-primary);
+        }
+
+        .multi-charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 2rem;
+        }
+
+        .chart-wrapper {
+            background: var(--color-card-bg);
+            border-radius: var(--radius-lg);
+            padding: 1.25rem;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--color-border);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .chart-wrapper::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 3px;
+            height: 100%;
+            background: var(--gradient-primary);
+        }
+
+        .chart-wrapper:hover {
+            box-shadow: var(--shadow-hover);
+            transform: translateY(-2px);
+        }
+
+        .chart-wrapper h3 {
+            font-size: 1.05rem;
+            color: var(--color-text);
+            margin: 0 0 0.25rem;
+            font-weight: 600;
+        }
+
+        .chart-info {
+            font-size: 0.8rem;
+            color: var(--color-text-muted);
+        }
+
+        .chart-container {
+            width: 100%;
+            height: 380px;
+            position: relative;
+        }
+
+        .chart-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--color-text-muted);
+            font-weight: 500;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .insights-section {
+            background: var(--gradient-header);
+            border-radius: var(--radius-xl);
+            padding: 2rem;
+            margin: 2rem 0;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--color-border);
+        }
+
+        .insights-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .insights-header h2 {
+            color: var(--color-text);
+            margin: 0 0 0.35rem;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .insights-header p {
+            color: var(--color-text-secondary);
+            margin: 0;
+            font-size: 0.95rem;
+        }
+
+        .insights-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.25rem;
+        }
+
+        .insight-card {
+            background: var(--color-card-bg);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--color-border);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .insight-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--gradient-primary);
+        }
+
+        .insight-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .insight-card h4 {
+            color: var(--color-text);
+            margin: 0 0 1rem;
+            font-size: 1.05rem;
+            font-weight: 600;
+        }
+
+        .insight-icon {
+            font-size: 2rem;
+            margin-bottom: 0.75rem;
+            display: block;
+        }
+
+        .insight-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--color-primary);
+            margin: 0.5rem 0;
+        }
+
+        .insight-description {
+            color: var(--color-text-secondary);
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        .export-section {
+            text-align: center;
+            padding: 2.5rem;
+            background: var(--color-card-bg);
+            border-radius: var(--radius-xl);
+            margin: 2rem 0;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--color-border);
+        }
+
+        .export-section h2 {
+            color: var(--color-text);
+            margin: 0 0 0.5rem;
+            font-size: 1.4rem;
+            font-weight: 600;
+        }
+
+        .export-section p {
+            color: var(--color-text-secondary);
+            max-width: 500px;
+            margin: 0 auto 2rem;
+            font-size: 0.9rem;
+        }
+
+        .export-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .export-buttons button {
+            padding: 0.6rem 1.5rem;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-family: var(--font-family);
+        }
+
+        .export-buttons button:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+
+        footer {
+            text-align: center;
+            padding: 1.5rem;
+            color: var(--color-text-muted);
+            border-top: 1px solid var(--color-border);
+            margin-top: 2rem;
+            font-size: 0.85rem;
+        }
+
+        @media (max-width: 768px) {
+            .multi-charts-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .filters-container {
+                grid-template-columns: 1fr;
+            }
+
+            .filter-actions {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .section-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.75rem;
+            }
+
+            .stats-metrics {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .chart-container {
+                height: 300px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .insights-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .export-buttons {
+                flex-direction: column;
+            }
+
+            .stats-metrics {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <!-- 左侧折叠导航 -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <span class="sidebar-logo-icon">📚</span>
+                <span class="sidebar-title">智慧图书馆</span>
+                <button class="sidebar-toggle" id="sidebarToggle" title="折叠导航">◀</button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-section-title">概览</div>
+                <a href="/" class="sidebar-nav-item">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-label">首页</span>
+                </a>
+                <a href="/dashboard" class="sidebar-nav-item">
+                    <span class="nav-icon">📊</span>
+                    <span class="nav-label">仪表盘</span>
+                </a>
+
+                <div class="nav-section-title">业务管理</div>
+                <a href="/reader" class="sidebar-nav-item">
+                    <span class="nav-icon">👥</span>
+                    <span class="nav-label">读者管理</span>
+                </a>
+                <a href="/book" class="sidebar-nav-item">
+                    <span class="nav-icon">📖</span>
+                    <span class="nav-label">图书管理</span>
+                </a>
+                <a href="/borrow" class="sidebar-nav-item">
+                    <span class="nav-icon">🔄</span>
+                    <span class="nav-label">借阅服务</span>
+                </a>
+
+                <div class="nav-section-title">数据</div>
+                <a href="/stats" class="sidebar-nav-item active">
+                    <span class="nav-icon">📈</span>
+                    <span class="nav-label">数据分析</span>
+                </a>
+                <a href="/admin" class="sidebar-nav-item">
+                    <span class="nav-icon">⚙️</span>
+                    <span class="nav-label">系统管理</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="sidebar-nav-item" style="cursor: default; color: var(--color-text-muted); font-size: 0.8rem;">
+                    <span class="nav-icon">⏱</span>
+                    <span class="nav-label" id="sidebarTime">--</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- 主内容区 -->
+        <main class="main-content">
+            <div class="top-bar">
+                <div class="page-title-area">
+                    <h1>数据分析中心</h1>
+                    <p>深度挖掘图书馆运营数据，洞察读者行为，优化服务策略</p>
+                </div>
+                <div class="top-bar-actions">
+                    <span style="font-size:0.8rem;color:var(--color-text-muted);">数据更新时间: <span id="lastUpdateTime">--</span></span>
+                    <button class="btn btn-secondary" onclick="refreshCharts()" style="font-size:0.85rem;">
+                        🔄 刷新
+                    </button>
+                </div>
+            </div>
+
+            <section class="stats-header fade-in-up">
+                <div class="stats-title">
+                    <h1>核心指标概览</h1>
+                    <p>图书馆关键运营数据一览</p>
+                </div>
+
+                <div class="stats-metrics">
+                    <div class="metric-card">
+                        <div class="metric-value">4,955</div>
+                        <div class="metric-label">图书总数</div>
+                        <div class="metric-change positive">+12.5%</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">2,000</div>
+                        <div class="metric-label">注册读者</div>
+                        <div class="metric-change positive">+8.3%</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">493</div>
+                        <div class="metric-label">预约记录</div>
+                        <div class="metric-change positive">+15.2%</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">96.8%</div>
+                        <div class="metric-label">按时归还率</div>
+                        <div class="metric-change positive">+2.1%</div>
+                    </div>
+                </div>
+            </section>
+
+            <div class="content-with-sidebar">
+                <div class="content-main">
+                    <section class="filters-container fade-in-up">
+                        <div class="filter-group">
+                            <label for="timeRange">时间范围</label>
+                            <select id="timeRange">
+                                <option value="7days">最近7天</option>
+                                <option value="30days" selected>最近30天</option>
+                                <option value="90days">最近90天</option>
+                                <option value="year">本年</option>
+                                <option value="custom">自定义</option>
+                            </select>
+                        </div>
+
+                        <div class="filter-group">
+                            <label for="categoryFilter">图书类别</label>
+                            <select id="categoryFilter">
+                                <option value="">全部类别</option>
+                                <option value="computer">计算机</option>
+                                <option value="literature">文学</option>
+                                <option value="economy">经济管理</option>
+                                <option value="engineering">工程技术</option>
+                            </select>
+                        </div>
+
+                        <div class="filter-group">
+                            <label for="readerType">读者类型</label>
+                            <select id="readerType">
+                                <option value="">全部读者</option>
+                                <option value="active">活跃读者</option>
+                                <option value="new">新读者</option>
+                                <option value="vip">VIP读者</option>
+                            </select>
+                        </div>
+
+                        <div class="filter-actions">
+                            <button class="btn btn-secondary" onclick="resetFilters()" style="font-size:0.85rem;">重置筛选</button>
+                            <button class="btn btn-primary" onclick="applyFilters()" style="font-size:0.85rem;">应用筛选</button>
+                        </div>
+                    </section>
+
+                    <section class="charts-section fade-in-up">
+                        <div class="section-header">
+                            <div>
+                                <h2 class="section-title">核心指标趋势</h2>
+                                <p class="section-description">关键业务指标随时间变化趋势分析</p>
+                            </div>
+                            <div class="section-actions">
+                                <button onclick="toggleChartView()">📊 切换视图</button>
+                            </div>
+                        </div>
+
+                        <div class="multi-charts-grid">
+                            <div class="chart-wrapper">
+                                <div class="chart-header">
+                                    <h3>借阅量趋势</h3>
+                                    <div class="chart-info">最近30天</div>
+                                </div>
+                                <div class="chart-container" id="trendChart1">
+                                    <div class="chart-placeholder">图表加载中...</div>
+                                </div>
+                            </div>
+
+                            <div class="chart-wrapper">
+                                <div class="chart-header">
+                                    <h3>读者活跃度</h3>
+                                    <div class="chart-info">最近30天</div>
+                                </div>
+                                <div class="chart-container" id="trendChart2">
+                                    <div class="chart-placeholder">图表加载中...</div>
+                                </div>
+                            </div>
+
+                            <div class="chart-wrapper">
+                                <div class="chart-header">
+                                    <h3>类别借阅分布</h3>
+                                    <div class="chart-info">占比分析</div>
+                                </div>
+                                <div class="chart-container" id="trendChart3">
+                                    <div class="chart-placeholder">图表加载中...</div>
+                                </div>
+                            </div>
+
+                            <div class="chart-wrapper">
+                                <div class="chart-header">
+                                    <h3>时间段分布</h3>
+                                    <div class="chart-info">24小时分析</div>
+                                </div>
+                                <div class="chart-container" id="trendChart4">
+                                    <div class="chart-placeholder">图表加载中...</div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+
+            <section class="insights-section fade-in-up">
+                <div class="insights-header">
+                    <h2>数据洞察</h2>
+                    <p>基于数据分析的关键发现和建议</p>
+                </div>
+
+                <div class="insights-grid">
+                    <div class="insight-card">
+                        <span class="insight-icon">⏰</span>
+                        <h4>热门借阅时段</h4>
+                        <div class="insight-value">14:00-16:00</div>
+                        <p class="insight-description">下午时段借阅量最高，建议加强该时段服务能力，增加工作人员配置</p>
+                    </div>
+
+                    <div class="insight-card">
+                        <span class="insight-icon">📚</span>
+                        <h4>最受欢迎类别</h4>
+                        <div class="insight-value">计算机类</div>
+                        <p class="insight-description">占总体借阅量的32%，建议增加相关图书采购，特别是人工智能和数据分析领域</p>
+                    </div>
+
+                    <div class="insight-card">
+                        <span class="insight-icon">📅</span>
+                        <h4>平均借阅周期</h4>
+                        <div class="insight-value">18.5天</div>
+                        <p class="insight-description">读者平均借阅时长，可作为库存周转率参考，建议优化馆藏结构</p>
+                    </div>
+
+                    <div class="insight-card">
+                        <span class="insight-icon">✅</span>
+                        <h4>逾期率</h4>
+                        <div class="insight-value">3.2%</div>
+                        <p class="insight-description">逾期归还比例较低，信用体系运行良好，建议继续保持提醒机制</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="export-section fade-in-up">
+                <h2>数据导出</h2>
+                <p>将分析结果导出为指定格式，用于报告和进一步分析</p>
+                <div class="export-buttons">
+                    <button class="btn btn-primary" onclick="exportData('excel')">
+                        📊 导出Excel报告
+                    </button>
+                    <button class="btn btn-secondary" onclick="exportData('pdf')">
+                        📄 导出PDF报告
+                    </button>
+                    <button class="btn btn-secondary" onclick="exportData('json')">
+                        🔗 导出JSON数据
+                    </button>
+                </div>
+            </section>
+
+            <footer>
+                <p>智慧图书馆管理系统 © 2026 - 数据分析模块</p>
+            </footer>
+        </main>
+    </div>
+
+    <script src="/static/js/stats.js"></script>
+    <script>
+        // 侧边栏折叠切换
+        document.getElementById('sidebarToggle').addEventListener('click', function() {
+            document.getElementById('sidebar').classList.toggle('collapsed');
+            setTimeout(() => {
+                Object.values(window.charts || {}).forEach(chart => {
+                    if (chart) chart.resize();
+                });
+            }, 350);
+        });
+
+        // 实时时钟
+        function updateClock() {
+            const now = new Date();
+            const time = now.toLocaleString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            document.getElementById('sidebarTime').textContent = time;
+        }
+        updateClock();
+        setInterval(updateClock, 1000);
+    </script>
+</body>
+</html>

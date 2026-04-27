@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>读者管理 - 智慧图书馆管理系统</title>
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/layout.css">
+    <style>
+        .page-header {
+            background: var(--gradient-header);
+            padding: 1.5rem 2rem;
+            border-radius: var(--radius-xl);
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--color-border);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .page-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--gradient-primary);
+        }
+
+        .page-title h1 {
+            font-size: 1.6rem;
+            color: var(--color-text);
+            margin: 0 0 0.25rem;
+            font-weight: 700;
+        }
+
+        .page-title p {
+            color: var(--color-text-secondary);
+            margin: 0;
+            font-size: 0.9rem;
+        }
+
+        .actions-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding: 1rem 1.5rem;
+            background: var(--color-card-bg);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--color-border);
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            flex: 1;
+            max-width: 500px;
+        }
+
+        .search-input {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-sm);
+            width: 100%;
+            font-size: 0.85rem;
+            font-family: var(--font-family);
+            color: var(--color-text);
+            transition: all 0.2s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px rgba(122, 139, 110, 0.1);
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.85rem;
+            font-family: var(--font-family);
+        }
+
+        .btn-primary {
+            background: var(--gradient-primary);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--color-text);
+            border: 1px solid var(--color-border);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(122, 139, 110, 0.25);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--color-primary);
+            color: var(--color-primary);
+        }
+
+        .readers-table-container {
+            background: var(--color-card-bg);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--color-border);
+            margin-bottom: 1.5rem;
+            overflow-x: auto;
+        }
+
+        .table-header {
+            display: grid;
+            grid-template-columns: 1fr 2fr 2fr 2fr 1fr 1fr 1fr 1fr;
+            padding: 0.75rem 1.25rem;
+            background: var(--bg-secondary);
+            font-weight: 600;
+            color: var(--color-text);
+            border-bottom: 2px solid var(--color-primary);
+            font-size: 0.85rem;
+            min-width: 700px;
+        }
+
+        .table-row {
+            display: grid;
+            grid-template-columns: 1fr 2fr 2fr 2fr 1fr 1fr 1fr 1fr;
+            padding: 0.75rem 1.25rem;
+            align-items: center;
+            border-bottom: 1px solid var(--color-border);
+            transition: background 0.15s ease;
+            font-size: 0.85rem;
+            min-width: 700px;
+        }
+
+        .table-row:hover {
+            background: var(--bg-secondary);
+        }
+
+        .table-row:last-child {
+            border-bottom: none;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .status-active {
+            background: rgba(107, 158, 122, 0.1);
+            color: var(--color-success);
+        }
+
+        .status-overdue {
+            background: rgba(196, 122, 122, 0.1);
+            color: var(--color-danger);
+        }
+
+        .status-inactive {
+            background: rgba(156, 163, 154, 0.1);
+            color: var(--color-text-muted);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 0.35rem;
+        }
+
+        .action-btn {
+            padding: 0.35rem 0.65rem;
+            border: 1px solid var(--color-border);
+            background: white;
+            border-radius: var(--radius-sm);
+            color: var(--color-text-secondary);
+            cursor: pointer;
+            transition: all 0.15s ease;
+            font-size: 0.8rem;
+            font-family: var(--font-family);
+        }
+
+        .action-btn:hover {
+            border-color: var(--color-primary);
+            color: var(--color-primary);
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            margin-top: 1.25rem;
+        }
+
+        .pagination button {
+            padding: 0.4rem 0.9rem;
+            border: 1px solid var(--color-border);
+            background: white;
+            border-radius: var(--radius-sm);
+            color: var(--color-text-secondary);
+            cursor: pointer;
+            transition: all 0.15s ease;
+            font-family: var(--font-family);
+            font-size: 0.85rem;
+        }
+
+        .pagination button:hover {
+            border-color: var(--color-primary);
+            color: var(--color-primary);
+        }
+
+        .pagination button.active {
+            background: var(--color-primary);
+            border-color: var(--color-primary);
+            color: white;
+        }
+
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .stats-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            background: var(--color-card-bg);
+            border-radius: var(--radius-lg);
+            padding: 1.25rem 1.5rem;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--color-border);
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            box-shadow: var(--shadow-hover);
+            transform: translateY(-2px);
+        }
+
+        .stat-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--color-text);
+            margin: 0.25rem 0;
+        }
+
+        .stat-label {
+            color: var(--color-text-secondary);
+            font-size: 0.85rem;
+            margin: 0;
+        }
+
+        @media (max-width: 768px) {
+            .actions-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .search-box {
+                max-width: 100%;
+            }
+
+            .stats-cards {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .stats-cards {
+                grid-template-columns: 1fr;
+            }
+
+            .table-header,
+            .table-row {
+                min-width: 600px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <!-- 左侧折叠导航 -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <span class="sidebar-logo-icon">📚</span>
+                <span class="sidebar-title">智慧图书馆</span>
+                <button class="sidebar-toggle" id="sidebarToggle" title="折叠导航">◀</button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-section-title">概览</div>
+                <a href="/" class="sidebar-nav-item">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-label">首页</span>
+                </a>
+                <a href="/dashboard" class="sidebar-nav-item">
+                    <span class="nav-icon">📊</span>
+                    <span class="nav-label">仪表盘</span>
+                </a>
+
+                <div class="nav-section-title">业务管理</div>
+                <a href="/reader" class="sidebar-nav-item active">
+                    <span class="nav-icon">👥</span>
+                    <span class="nav-label">读者管理</span>
+                </a>
+                <a href="/book" class="sidebar-nav-item">
+                    <span class="nav-icon">📖</span>
+                    <span class="nav-label">图书管理</span>
+                </a>
+                <a href="/borrow" class="sidebar-nav-item">
+                    <span class="nav-icon">🔄</span>
+                    <span class="nav-label">借阅服务</span>
+                </a>
+
+                <div class="nav-section-title">数据</div>
+                <a href="/stats" class="sidebar-nav-item">
+                    <span class="nav-icon">📈</span>
+                    <span class="nav-label">数据分析</span>
+                </a>
+                <a href="/admin" class="sidebar-nav-item">
+                    <span class="nav-icon">⚙️</span>
+                    <span class="nav-label">系统管理</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="sidebar-nav-item" style="cursor: default; color: var(--color-text-muted); font-size: 0.8rem;">
+                    <span class="nav-icon">⏱</span>
+                    <span class="nav-label" id="sidebarTime">--</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- 主内容区 -->
+        <main class="main-content">
+            <div class="top-bar">
+                <div class="page-title-area">
+                    <h1>读者管理</h1>
+                    <p>管理读者信息，维护信用体系，监控读者行为</p>
+                </div>
+                <div class="top-bar-actions">
+                    <button class="btn btn-primary" onclick="openNewReaderModal()">
+                        + 添加新读者
+                    </button>
+                </div>
+            </div>
+
+            <section class="stats-cards fade-in-up">
+                <div class="stat-card">
+                    <div class="stat-icon">👥</div>
+                    <div class="stat-value" id="totalReaders">0</div>
+                    <p class="stat-label">注册读者</p>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">📖</div>
+                    <div class="stat-value" id="activeReaders">0</div>
+                    <p class="stat-label">活跃读者</p>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">⭐</div>
+                    <div class="stat-value" id="avgCreditScore">0</div>
+                    <p class="stat-label">平均信用分</p>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">⏰</div>
+                    <div class="stat-value" id="overdueReaders">0</div>
+                    <p class="stat-label">逾期读者</p>
+                </div>
+            </section>
+
+            <section class="actions-bar fade-in-up">
+                <div class="search-box">
+                    <input type="text" class="search-input" placeholder="搜索读者ID、姓名或邮箱...">
+                    <button class="btn btn-primary" onclick="searchReaders()">搜索</button>
+                </div>
+            </section>
+
+            <section class="readers-table-container fade-in-up">
+                <div class="table-header">
+                    <div>读者ID</div>
+                    <div>姓名</div>
+                    <div>联系方式</div>
+                    <div>信用分</div>
+                    <div>借阅额度</div>
+                    <div>当前借阅</div>
+                    <div>逾期次数</div>
+                    <div>操作</div>
+                </div>
+
+                <div id="readersTableBody">
+                    <div class="table-row">
+                        <div>R20230001</div>
+                        <div>张三</div>
+                        <div>zhangsan@example.com</div>
+                        <div><span class="status-badge status-active">95</span></div>
+                        <div>5</div>
+                        <div>2</div>
+                        <div>0</div>
+                        <div class="action-buttons">
+                            <button class="action-btn" onclick="viewReader('R20230001')">查看</button>
+                            <button class="action-btn" onclick="editReader('R20230001')">编辑</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <div class="pagination fade-in-up">
+                <button onclick="changePage(-1)" disabled id="prevPage">上一页</button>
+                <div>
+                    <span id="currentPage">1</span> / <span id="totalPages">1</span>
+                </div>
+                <button onclick="changePage(1)" id="nextPage">下一页</button>
+            </div>
+        </main>
+    </div>
+
+    <script src="/static/js/reader.js"></script>
+    <script>
+        document.getElementById('sidebarToggle').addEventListener('click', function() {
+            document.getElementById('sidebar').classList.toggle('collapsed');
+        });
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('sidebarTime').textContent = now.toLocaleString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }
+        updateClock();
+        setInterval(updateClock, 1000);
+    </script>
+</body>
+</html>
