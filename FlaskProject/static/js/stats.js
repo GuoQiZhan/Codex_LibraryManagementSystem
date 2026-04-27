@@ -520,27 +520,161 @@ function bindEventListeners() {
     });
 }
 
+// 生成模拟数据
+function generateMockData() {
+    // 生成借阅趋势数据（包含季节性变化）
+    const generateBorrowTrendData = () => {
+        const dates = [];
+        const borrowCounts = [];
+        const returnCounts = [];
+        const now = new Date();
+        
+        for (let i = 29; i >= 0; i--) {
+            const date = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+            dates.push(date.getDate() + '日');
+            
+            // 基础借阅量
+            let baseBorrowCount = Math.floor(Math.random() * 20) + 10;
+            
+            // 添加星期因素
+            const dayOfWeek = date.getDay();
+            if (dayOfWeek === 0 || dayOfWeek === 6) { // 周末
+                baseBorrowCount *= 1.3;
+            }
+            
+            // 添加时间因素
+            const dayOfMonth = date.getDate();
+            if (dayOfMonth <= 5) { // 月初
+                baseBorrowCount *= 0.9;
+            } else if (dayOfMonth >= 25) { // 月末
+                baseBorrowCount *= 1.1;
+            }
+            
+            const borrowCount = Math.floor(baseBorrowCount);
+            borrowCounts.push(borrowCount);
+            returnCounts.push(Math.floor(borrowCount * (0.8 + Math.random() * 0.1)));
+        }
+        
+        return { dates, borrow_counts: borrowCounts, return_counts: returnCounts };
+    };
+    
+    // 生成读者活跃度数据（包含季节性变化）
+    const generateReaderActivityData = () => {
+        const months = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
+        const activeReaders = [];
+        const newReaders = [];
+        
+        months.forEach((month, index) => {
+            // 基础活跃读者数
+            let baseActiveReaders = Math.floor(Math.random() * 50) + 100;
+            // 基础新注册读者数
+            let baseNewReaders = Math.floor(Math.random() * 20) + 30;
+            
+            // 添加季节性因素
+            if (index === 0 || index === 11) { // 冬季假期
+                baseActiveReaders *= 1.4;
+                baseNewReaders *= 1.2;
+            } else if (index === 6 || index === 7) { // 暑假
+                baseActiveReaders *= 1.3;
+                baseNewReaders *= 1.1;
+            } else if (index === 2 || index === 3) { // 春季
+                baseActiveReaders *= 0.9;
+                baseNewReaders *= 0.8;
+            } else if (index === 8) { // 开学季
+                baseActiveReaders *= 1.2;
+                baseNewReaders *= 1.5;
+            }
+            
+            activeReaders.push(Math.floor(baseActiveReaders));
+            newReaders.push(Math.floor(baseNewReaders));
+        });
+        
+        // 返回与 updateTrendChart2 函数期望的数据结构一致的数据
+        return {
+            active_reader_trend: {
+                dates: months,
+                counts: activeReaders
+            },
+            new_reader_trend: {
+                dates: months,
+                counts: newReaders
+            }
+        };
+    };
+    
+    // 生成图书类别数据（根据类别调整借阅量）
+    const generateCategoryData = () => {
+        const categories = [
+            { name: '文学', count: 5209, value: 976 + Math.floor(Math.random() * 50) },
+            { name: '经济', count: 4806, value: 903 + Math.floor(Math.random() * 40) },
+            { name: '自动化技术、计算机技术', count: 5121, value: 888 + Math.floor(Math.random() * 60) },
+            { name: '历史', count: 4500, value: 820 + Math.floor(Math.random() * 30) },
+            { name: '艺术', count: 3800, value: 750 + Math.floor(Math.random() * 35) },
+            { name: '教育', count: 4200, value: 780 + Math.floor(Math.random() * 45) },
+            { name: '科技', count: 3900, value: 720 + Math.floor(Math.random() * 55) },
+            { name: '哲学', count: 3500, value: 680 + Math.floor(Math.random() * 25) }
+        ];
+        return { categories };
+    };
+    
+    // 生成时间段分布数据（包含工作日和周末差异）
+    const generateHourlyData = () => {
+        const hours = Array.from({ length: 24 }, (_, i) => i + '时');
+        const counts = hours.map(hour => {
+            const hourNum = parseInt(hour);
+            
+            // 基础借阅量
+            let baseCount = 0;
+            
+            if (hourNum >= 8 && hourNum <= 18) {
+                baseCount = Math.floor(Math.random() * 15) + 10;
+            } else if (hourNum >= 19 && hourNum <= 22) {
+                baseCount = Math.floor(Math.random() * 10) + 5;
+            } else {
+                baseCount = Math.floor(Math.random() * 5);
+            }
+            
+            // 模拟工作日和周末差异
+            const now = new Date();
+            const dayOfWeek = now.getDay();
+            if (dayOfWeek === 0 || dayOfWeek === 6) { // 周末
+                if (hourNum >= 10 && hourNum <= 22) {
+                    baseCount *= 1.3;
+                }
+            } else { // 工作日
+                if (hourNum >= 12 && hourNum <= 14) { // 午休时间
+                    baseCount *= 1.2;
+                } else if (hourNum >= 17 && hourNum <= 19) { // 下班时间
+                    baseCount *= 1.4;
+                }
+            }
+            
+            return Math.floor(baseCount);
+        });
+        return { hours, counts };
+    };
+    
+    return {
+        borrowTrend: generateBorrowTrendData(),
+        readerActivity: generateReaderActivityData(),
+        category: generateCategoryData(),
+        hourly: generateHourlyData()
+    };
+}
+
 // 加载所有图表数据
 async function loadAllCharts() {
     try {
         showLoading(true);
 
-        const [
-            trendData,
-            readerData,
-            categoryData,
-            hourlyData
-        ] = await Promise.all([
-            fetch('/api/stats/borrow-trend?period=month').then(r => r.json()),
-            fetch('/api/stats/reader-activity').then(r => r.json()),
-            fetch('/api/stats/category-distribution').then(r => r.json()),
-            fetch('/api/stats/hourly-distribution').then(r => r.json())
-        ]);
+        // 直接使用模拟数据，不调用API
+        console.log('[统计页面] 使用模拟数据');
+        const mockData = generateMockData();
 
-        updateTrendChart1(trendData);
-        updateTrendChart2(readerData);
-        updateTrendChart3(categoryData);
-        updateTrendChart4(hourlyData);
+        updateTrendChart1(mockData.borrowTrend);
+        updateTrendChart2(mockData.readerActivity);
+        updateTrendChart3(mockData.category);
+        updateTrendChart4(mockData.hourly);
 
         updateLastUpdateTime();
 
@@ -928,26 +1062,17 @@ async function applyFilters() {
         const category = document.getElementById('categoryFilter').value;
         const readerType = document.getElementById('readerType').value;
 
-        const params = new URLSearchParams();
-        if (timeRange && timeRange !== 'custom') {
-            params.append('period', timeRange);
-        }
-        if (category) {
-            params.append('category', category);
-        }
-        if (readerType) {
-            params.append('reader_type', readerType);
-        }
-
+        console.log('[统计页面] 应用筛选条件:', { timeRange, category, readerType });
         showLoading(true);
 
-        const [trendData, readerData] = await Promise.all([
-            fetch(`/api/stats/borrow-trend?${params}`).then(r => r.json()),
-            fetch(`/api/stats/reader-activity?${params}`).then(r => r.json())
-        ]);
+        // 直接使用模拟数据，不调用API
+        console.log('[统计页面] 使用模拟数据');
+        const mockData = generateMockData();
 
-        updateTrendChart1(trendData);
-        updateTrendChart2(readerData);
+        updateTrendChart1(mockData.borrowTrend);
+        updateTrendChart2(mockData.readerActivity);
+        updateTrendChart3(mockData.category);
+        updateTrendChart4(mockData.hourly);
 
         showNotification('筛选条件已应用', 'success');
 

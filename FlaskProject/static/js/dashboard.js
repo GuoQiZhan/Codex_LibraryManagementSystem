@@ -943,7 +943,7 @@ function switchActivityChart(type) {
 
 // 生成模拟数据
 function generateMockData() {
-    // 生成借阅趋势数据
+    // 生成借阅趋势数据（包含季节性变化）
     const generateBorrowTrendData = () => {
         const dates = [];
         const borrowCounts = [];
@@ -953,59 +953,136 @@ function generateMockData() {
         for (let i = 11; i >= 0; i--) {
             const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
             dates.push(date.toISOString().slice(0, 7)); // YYYY-MM
-            const borrowCount = Math.floor(Math.random() * 20) + 10;
+            
+            // 基础借阅量
+            let baseBorrowCount = Math.floor(Math.random() * 20) + 10;
+            
+            // 添加季节性因素
+            const month = date.getMonth();
+            if (month === 11 || month === 0 || month === 1) { // 冬季假期
+                baseBorrowCount *= 1.5;
+            } else if (month === 6 || month === 7) { // 暑假
+                baseBorrowCount *= 1.3;
+            } else if (month === 2 || month === 3) { // 春季
+                baseBorrowCount *= 0.9;
+            } else if (month === 8 || month === 9) { // 开学季
+                baseBorrowCount *= 1.2;
+            }
+            
+            const borrowCount = Math.floor(baseBorrowCount);
             borrowCounts.push(borrowCount);
-            returnCounts.push(Math.floor(borrowCount * 0.85));
+            returnCounts.push(Math.floor(borrowCount * (0.8 + Math.random() * 0.1)));
         }
         
         return { dates, borrow_counts: borrowCounts, return_counts: returnCounts };
     };
     
-    // 生成图书类别数据
+    // 生成图书类别数据（根据类别调整借阅量）
     const generateCategoryData = () => {
         const categories = [
-            { name: '文学', count: 5209, value: 976 },
-            { name: '经济', count: 4806, value: 903 },
-            { name: '自动化技术、计算机技术', count: 5121, value: 888 },
-            { name: '历史', count: 4500, value: 820 },
-            { name: '艺术', count: 3800, value: 750 },
-            { name: '教育', count: 4200, value: 780 },
-            { name: '科技', count: 3900, value: 720 },
-            { name: '哲学', count: 3500, value: 680 },
-            { name: '社会科学', count: 4100, value: 760 },
-            { name: '自然科学', count: 3700, value: 700 },
-            { name: '其他', count: 2800, value: 550 }
+            { name: '文学', count: 5209, value: 976 + Math.floor(Math.random() * 50) },
+            { name: '经济', count: 4806, value: 903 + Math.floor(Math.random() * 40) },
+            { name: '自动化技术、计算机技术', count: 5121, value: 888 + Math.floor(Math.random() * 60) },
+            { name: '历史', count: 4500, value: 820 + Math.floor(Math.random() * 30) },
+            { name: '艺术', count: 3800, value: 750 + Math.floor(Math.random() * 35) },
+            { name: '教育', count: 4200, value: 780 + Math.floor(Math.random() * 45) },
+            { name: '科技', count: 3900, value: 720 + Math.floor(Math.random() * 55) },
+            { name: '哲学', count: 3500, value: 680 + Math.floor(Math.random() * 25) },
+            { name: '社会科学', count: 4100, value: 760 + Math.floor(Math.random() * 40) },
+            { name: '自然科学', count: 3700, value: 700 + Math.floor(Math.random() * 30) },
+            { name: '其他', count: 2800, value: 550 + Math.floor(Math.random() * 20) }
         ];
         return { categories };
     };
     
-    // 生成读者活跃度数据
+    // 生成读者活跃度数据（包含工作日和周末差异）
     const generateActivityData = () => {
         const hours = Array.from({ length: 24 }, (_, i) => i);
         const counts = hours.map(hour => {
+            // 基础借阅量
+            let baseCount = 0;
+            
             if (hour >= 8 && hour <= 18) {
-                return Math.floor(Math.random() * 15) + 10;
+                baseCount = Math.floor(Math.random() * 15) + 10;
             } else if (hour >= 19 && hour <= 22) {
-                return Math.floor(Math.random() * 10) + 5;
+                baseCount = Math.floor(Math.random() * 10) + 5;
             } else {
-                return Math.floor(Math.random() * 5);
+                baseCount = Math.floor(Math.random() * 5);
             }
+            
+            // 模拟工作日和周末差异
+            const now = new Date();
+            const dayOfWeek = now.getDay();
+            if (dayOfWeek === 0 || dayOfWeek === 6) { // 周末
+                if (hour >= 10 && hour <= 22) {
+                    baseCount *= 1.3;
+                }
+            } else { // 工作日
+                if (hour >= 12 && hour <= 14) { // 午休时间
+                    baseCount *= 1.2;
+                } else if (hour >= 17 && hour <= 19) { // 下班时间
+                    baseCount *= 1.4;
+                }
+            }
+            
+            return Math.floor(baseCount);
         });
         return { hours, counts };
     };
     
     // 生成统计卡片数据
     const generateStatsData = () => {
+        // 基础数据
+        const baseTodayBorrows = Math.floor(Math.random() * 30) + 15; // 今日借阅量：15-45
+        const baseActiveReaders = Math.floor(Math.random() * 50) + 20; // 在线读者：20-70
+        const baseCurrentBorrowed = Math.floor(Math.random() * 200) + 300; // 在借图书：300-500
+        const baseOverdueBooks = Math.floor(Math.random() * 20) + 5; // 逾期图书：5-25
+        const baseAvailableStock = Math.floor(Math.random() * 1000) + 4000; // 可用图书：4000-5000
+        
+        // 根据时间调整数据
+        const now = new Date();
+        const hour = now.getHours();
+        const dayOfWeek = now.getDay();
+        
+        let todayBorrows = baseTodayBorrows;
+        let activeReaders = baseActiveReaders;
+        
+        // 时间因素
+        if (hour >= 8 && hour <= 12) {
+            // 上午
+            todayBorrows = Math.floor(todayBorrows * 0.6);
+            activeReaders = Math.floor(activeReaders * 0.7);
+        } else if (hour >= 12 && hour <= 18) {
+            // 下午
+            todayBorrows = Math.floor(todayBorrows * 0.8);
+            activeReaders = Math.floor(activeReaders * 0.9);
+        } else if (hour >= 18 && hour <= 22) {
+            // 晚上
+            todayBorrows = baseTodayBorrows;
+            activeReaders = baseActiveReaders;
+        } else {
+            // 深夜
+            todayBorrows = Math.floor(todayBorrows * 0.2);
+            activeReaders = Math.floor(activeReaders * 0.3);
+        }
+        
+        // 星期因素
+        if (dayOfWeek === 0 || dayOfWeek === 6) {
+            // 周末
+            todayBorrows = Math.floor(todayBorrows * 1.3);
+            activeReaders = Math.floor(activeReaders * 1.4);
+        }
+        
         return {
-            today_borrows: Math.floor(Math.random() * 30) + 15, // 今日借阅量：15-45
-            active_readers: Math.floor(Math.random() * 50) + 20, // 在线读者：20-70
-            current_borrowed: Math.floor(Math.random() * 200) + 300, // 在借图书：300-500
-            overdue_books: Math.floor(Math.random() * 20) + 5, // 逾期图书：5-25
-            available_stock: Math.floor(Math.random() * 1000) + 4000, // 可用图书：4000-5000
-            total_books: 5000, // 总图书数
-            total_readers: 1000, // 总读者数
-            total_borrows: 3000, // 总借阅数
-            total_fines: 500 // 总罚款
+            today_borrows: todayBorrows,
+            active_readers: activeReaders,
+            current_borrowed: baseCurrentBorrowed,
+            overdue_books: baseOverdueBooks,
+            available_stock: baseAvailableStock,
+            total_books: 5000,
+            total_readers: 1000,
+            total_borrows: 3000,
+            total_fines: 500
         };
     };
     
