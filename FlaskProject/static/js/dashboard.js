@@ -61,6 +61,33 @@ function greenGradient(from, to, opacity) {
     ]);
 }
 
+// 工具：彩色渐变
+function colorGradient(from, to) {
+    return new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+        { offset: 0, color: from },
+        { offset: 1, color: to }
+    ]);
+}
+
+// 工具：获取颜色
+function getColor(index) {
+    const colors = [
+        COLORS.primary,      // 主色 - 紫色
+        COLORS.success,      // 成功色 - 绿色
+        COLORS.warning,      // 警告色 - 橙色
+        COLORS.danger,       // 危险色 - 红色
+        '#4A90E2',           // 蓝色
+        '#9013FE',           // 深紫色
+        '#00B8D4',           // 青色
+        '#FF6B6B',           // 粉红色
+        '#4ECDC4',           // 薄荷绿
+        '#FFD166',           // 黄色
+        '#6A0572',           // 深紫色
+        '#1A535C'            // 深青色
+    ];
+    return colors[index % colors.length];
+}
+
 // 通用tooltip样式
 const TOOLTIP_STYLE = {
     backgroundColor: 'rgba(255, 255, 255, 0.98)',
@@ -327,7 +354,10 @@ function initActivityChart() {
         tooltip: {
             trigger: 'axis',
             axisPointer: {
-                type: 'shadow'
+                type: 'shadow',
+                shadowStyle: {
+                    color: 'rgba(155, 142, 196, 0.1)'
+                }
             },
             ...TOOLTIP_STYLE,
             formatter: function(params) {
@@ -357,10 +387,14 @@ function initActivityChart() {
             axisLabel: {
                 color: COLORS.textSecondary,
                 fontSize: 11,
-                margin: 10,
-                interval: 2
+                margin: 12,
+                interval: 2,
+                rotate: 45
             },
             axisTick: {
+                show: false
+            },
+            splitLine: {
                 show: false
             }
         },
@@ -371,13 +405,18 @@ function initActivityChart() {
             },
             axisLabel: {
                 color: COLORS.textSecondary,
-                fontSize: 12
+                fontSize: 12,
+                formatter: '{value}'
             },
             splitLine: {
                 lineStyle: {
                     color: COLORS.bgSecondary,
-                    type: 'dashed'
+                    type: 'dashed',
+                    opacity: 0.6
                 }
+            },
+            axisTick: {
+                show: false
             }
         },
         series: [{
@@ -393,31 +432,29 @@ function initActivityChart() {
                     const ratio = value / max;
 
                     if (ratio > 0.8) {
-                        return greenGradient(
+                        return colorGradient(
                             COLORS.primaryDark,
-                            COLORS.primary,
-                            COLORS.primaryDark
-                        );
-                    } else if (ratio > 0.5) {
-                        return greenGradient(
-                            COLORS.primary,
-                            COLORS.primaryLight,
                             COLORS.primary
                         );
-                    } else {
-                        return greenGradient(
-                            COLORS.primaryLight,
-                            COLORS.primaryPale,
+                    } else if (ratio > 0.5) {
+                        return colorGradient(
+                            COLORS.primary,
                             COLORS.primaryLight
+                        );
+                    } else {
+                        return colorGradient(
+                            COLORS.primaryLight,
+                            COLORS.primaryPale
                         );
                     }
                 },
-                borderRadius: [3, 3, 0, 0]
+                borderRadius: [6, 6, 0, 0]
             },
             emphasis: {
                 itemStyle: {
-                    shadowBlur: 10,
-                    shadowColor: 'rgba(155, 142, 196, 0.25)'
+                    shadowBlur: 15,
+                    shadowColor: 'rgba(155, 142, 196, 0.3)',
+                    shadowOffsetY: 3
                 }
             },
             ...CHART_ANIMATION,
@@ -516,10 +553,27 @@ function updateBorrowTrendChartWithFullConfig(data) {
             axisPointer: {
                 type: 'cross',
                 label: {
-                    backgroundColor: COLORS.primary
+                    backgroundColor: COLORS.primary,
+                    color: COLORS.white,
+                    padding: [8, 12],
+                    borderRadius: 4
+                },
+                crossStyle: {
+                    color: COLORS.border,
+                    width: 1,
+                    type: 'dashed'
                 }
             },
-            ...TOOLTIP_STYLE
+            ...TOOLTIP_STYLE,
+            formatter: function(params) {
+                let result = '<div style="font-weight: 600; margin-bottom: 8px;">' + params[0].name + '</div>';
+                params.forEach(function(item) {
+                    result += '<div style="display: flex; align-items: center; margin-bottom: 4px;">' +
+                             '<span style="display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: ' + item.color + '; margin-right: 8px;"></span>' +
+                             '<span>' + item.seriesName + ': <strong>' + item.value + '</strong></span></div>';
+                });
+                return result;
+            }
         },
         legend: {
             data: ['借阅量', '归还量'],
@@ -527,17 +581,22 @@ function updateBorrowTrendChartWithFullConfig(data) {
             left: 'center',
             textStyle: {
                 color: COLORS.textSecondary,
-                fontSize: 12
+                fontSize: 12,
+                fontWeight: '500'
             },
             itemWidth: 20,
             itemHeight: 10,
-            padding: [0, 0, 10, 0]
+            itemGap: 20,
+            padding: [0, 0, 15, 0],
+            formatter: function(name) {
+                return name;
+            }
         },
         grid: {
             left: '3%',
             right: '4%',
-            bottom: '15%',
-            top: '10%',
+            bottom: '18%',
+            top: '12%',
             containLabel: true
         },
         xAxis: {
@@ -553,9 +612,13 @@ function updateBorrowTrendChartWithFullConfig(data) {
             axisLabel: {
                 color: COLORS.textSecondary,
                 fontSize: 12,
-                margin: 10
+                margin: 12,
+                rotate: dates.length > 12 ? 45 : 0
             },
             axisTick: {
+                show: false
+            },
+            splitLine: {
                 show: false
             }
         },
@@ -566,13 +629,18 @@ function updateBorrowTrendChartWithFullConfig(data) {
             },
             axisLabel: {
                 color: COLORS.textSecondary,
-                fontSize: 12
+                fontSize: 12,
+                formatter: '{value}'
             },
             splitLine: {
                 lineStyle: {
                     color: COLORS.bgSecondary,
-                    type: 'dashed'
+                    type: 'dashed',
+                    opacity: 0.6
                 }
+            },
+            axisTick: {
+                show: false
             }
         },
         series: [
@@ -581,18 +649,20 @@ function updateBorrowTrendChartWithFullConfig(data) {
                 type: 'line',
                 smooth: true,
                 symbol: 'circle',
-                symbolSize: 7,
+                symbolSize: 8,
                 data: borrowCounts,
                 lineStyle: {
-                    width: 2.5,
+                    width: 3,
                     color: COLORS.primary,
                     cap: 'round',
                     join: 'round'
                 },
                 itemStyle: {
                     color: COLORS.primary,
-                    borderWidth: 2,
-                    borderColor: COLORS.white
+                    borderWidth: 2.5,
+                    borderColor: COLORS.white,
+                    shadowBlur: 8,
+                    shadowColor: 'rgba(155, 142, 196, 0.3)'
                 },
                 areaStyle: {
                     color: greenGradient(
@@ -604,9 +674,9 @@ function updateBorrowTrendChartWithFullConfig(data) {
                 emphasis: {
                     focus: 'series',
                     itemStyle: {
-                        borderWidth: 3,
-                        shadowBlur: 10,
-                        shadowColor: 'rgba(155, 142, 196, 0.25)'
+                        borderWidth: 4,
+                        shadowBlur: 12,
+                        shadowColor: 'rgba(155, 142, 196, 0.4)'
                     }
                 },
                 ...CHART_ANIMATION,
@@ -617,18 +687,20 @@ function updateBorrowTrendChartWithFullConfig(data) {
                 type: 'line',
                 smooth: true,
                 symbol: 'circle',
-                symbolSize: 7,
+                symbolSize: 8,
                 data: returnCounts,
                 lineStyle: {
-                    width: 2.5,
+                    width: 3,
                     color: COLORS.success,
                     cap: 'round',
                     join: 'round'
                 },
                 itemStyle: {
                     color: COLORS.success,
-                    borderWidth: 2,
-                    borderColor: COLORS.white
+                    borderWidth: 2.5,
+                    borderColor: COLORS.white,
+                    shadowBlur: 8,
+                    shadowColor: 'rgba(124, 184, 154, 0.3)'
                 },
                 areaStyle: {
                     color: greenGradient(
@@ -640,9 +712,9 @@ function updateBorrowTrendChartWithFullConfig(data) {
                 emphasis: {
                     focus: 'series',
                     itemStyle: {
-                        borderWidth: 3,
-                        shadowBlur: 10,
-                        shadowColor: 'rgba(124, 184, 154, 0.25)'
+                        borderWidth: 4,
+                        shadowBlur: 12,
+                        shadowColor: 'rgba(124, 184, 154, 0.4)'
                     }
                 },
                 ...CHART_ANIMATION,
@@ -687,29 +759,42 @@ function switchCategoryChart(type) {
                 left: 'center',
                 textStyle: {
                     color: COLORS.textSecondary,
-                    fontSize: 12
+                    fontSize: 12,
+                    fontWeight: '500'
                 },
-                itemWidth: 12,
-                itemHeight: 12,
-                itemGap: 16,
-                formatter: '{name}',
+                itemWidth: 14,
+                itemHeight: 14,
+                itemGap: 18,
+                formatter: function(name) {
+                    const item = categoryData.categories.find(cat => cat.name === name);
+                    return name;
+                },
                 tooltip: {
-                    show: true
+                    show: true,
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    borderColor: COLORS.primary,
+                    padding: 8,
+                    textStyle: {
+                        color: COLORS.text,
+                        fontSize: 12
+                    }
                 },
-                padding: [0, 0, 10, 0],
+                padding: [0, 0, 15, 0],
                 z: 1
             },
             series: [{
                 name: '图书类别',
                 type: 'pie',
-                radius: ['40%', '70%'],
+                radius: ['45%', '70%'],
                 center: ['50%', '45%'],
                 avoidLabelOverlap: true,
                 z: 10,
                 itemStyle: {
-                    borderRadius: 6,
+                    borderRadius: 8,
                     borderColor: COLORS.white,
-                    borderWidth: 2
+                    borderWidth: 2,
+                    shadowBlur: 8,
+                    shadowColor: 'rgba(0, 0, 0, 0.1)'
                 },
                 label: {
                     show: false,
@@ -719,14 +804,15 @@ function switchCategoryChart(type) {
                     label: {
                         show: true,
                         fontSize: 16,
-                        fontWeight: 'bold',
+                        fontWeight: '600',
                         color: COLORS.text,
                         formatter: '{b}\n{d}%'
                     },
                     itemStyle: {
-                        shadowBlur: 12,
+                        shadowBlur: 15,
+                        shadowColor: 'rgba(155, 142, 196, 0.3)',
                         shadowOffsetX: 0,
-                        shadowColor: 'rgba(0, 0, 0, 0.2)'
+                        shadowOffsetY: 0
                     },
                     scaleSize: 8
                 },
@@ -737,10 +823,7 @@ function switchCategoryChart(type) {
                     smooth: true
                 },
                 data: chartData,
-                color: [
-                    COLORS.primary, COLORS.primaryDark, COLORS.primaryLight, COLORS.primaryPale,
-                    COLORS.warning, COLORS.info, COLORS.success, COLORS.primaryFaint
-                ]
+                color: chartData.map((_, index) => getColor(index))
             }],
             ...CHART_ANIMATION,
             animationType: 'scale'
@@ -753,9 +836,19 @@ function switchCategoryChart(type) {
             tooltip: {
                 trigger: 'axis',
                 axisPointer: {
-                    type: 'shadow'
+                    type: 'shadow',
+                    shadowStyle: {
+                        color: 'rgba(155, 142, 196, 0.1)'
+                    }
                 },
-                ...TOOLTIP_STYLE
+                ...TOOLTIP_STYLE,
+                formatter: function(params) {
+                    const data = params[0];
+                    return '<div style="font-weight: 600; margin-bottom: 6px;">' + data.name + '</div>' +
+                           '<div style="display: flex; align-items: center;">' +
+                           '<span style="display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: ' + data.color + '; margin-right: 8px;"></span>' +
+                           '<span>借阅量: <strong>' + data.value + '</strong></span></div>';
+                }
             },
             grid: {
                 left: '3%',
@@ -779,11 +872,14 @@ function switchCategoryChart(type) {
                 axisLabel: {
                     color: COLORS.textSecondary,
                     fontSize: 11,
-                    margin: 10,
+                    margin: 12,
                     interval: 0,
-                    rotate: 35
+                    rotate: 45
                 },
                 axisTick: {
+                    show: false
+                },
+                splitLine: {
                     show: false
                 }
             },
@@ -794,13 +890,18 @@ function switchCategoryChart(type) {
                 },
                 axisLabel: {
                     color: COLORS.textSecondary,
-                    fontSize: 12
+                    fontSize: 12,
+                    formatter: '{value}'
                 },
                 splitLine: {
                     lineStyle: {
                         color: COLORS.bgSecondary,
-                        type: 'dashed'
+                        type: 'dashed',
+                        opacity: 0.6
                     }
+                },
+                axisTick: {
+                    show: false
                 }
             },
             series: [{
@@ -808,18 +909,24 @@ function switchCategoryChart(type) {
                 data: chartData.map(item => item.value),
                 barWidth: '60%',
                 itemStyle: {
-                    color: greenGradient(
-                        COLORS.primary,
-                        COLORS.primaryDark,
-                        COLORS.primary
-                    ),
-                    borderRadius: [3, 3, 0, 0]
+                    color: function(params) {
+                        return getColor(params.dataIndex);
+                    },
+                    borderRadius: [6, 6, 0, 0]
                 },
                 emphasis: {
                     itemStyle: {
-                        shadowBlur: 10,
-                        shadowColor: 'rgba(155, 142, 196, 0.25)'
+                        shadowBlur: 15,
+                        shadowColor: 'rgba(155, 142, 196, 0.3)',
+                        shadowOffsetY: 3
                     }
+                },
+                label: {
+                    show: true,
+                    position: 'top',
+                    fontSize: 11,
+                    color: COLORS.textSecondary,
+                    formatter: '{c}'
                 },
                 ...CHART_ANIMATION,
                 universalTransition: true
@@ -887,10 +994,26 @@ function generateMockData() {
         return { hours, counts };
     };
     
+    // 生成统计卡片数据
+    const generateStatsData = () => {
+        return {
+            today_borrows: Math.floor(Math.random() * 30) + 15, // 今日借阅量：15-45
+            active_readers: Math.floor(Math.random() * 50) + 20, // 在线读者：20-70
+            current_borrowed: Math.floor(Math.random() * 200) + 300, // 在借图书：300-500
+            overdue_books: Math.floor(Math.random() * 20) + 5, // 逾期图书：5-25
+            available_stock: Math.floor(Math.random() * 1000) + 4000, // 可用图书：4000-5000
+            total_books: 5000, // 总图书数
+            total_readers: 1000, // 总读者数
+            total_borrows: 3000, // 总借阅数
+            total_fines: 500 // 总罚款
+        };
+    };
+    
     return {
         borrowTrend: generateBorrowTrendData(),
         category: generateCategoryData(),
-        activity: generateActivityData()
+        activity: generateActivityData(),
+        stats: generateStatsData()
     };
 }
 
@@ -904,32 +1027,13 @@ async function loadDashboardData() {
 
         showLoading(true);
 
-        let overviewData, trendData, categoryData, activityData;
-
-        try {
-            // 尝试从API获取数据
-            const [apiOverview, apiTrend, apiCategory, apiActivity] = await Promise.all([
-                fetch('/api/stats/overview').then(r => r.json()),
-                fetch(`/api/stats/borrow-trend?period=${period}`).then(r => r.json()),
-                fetch('/api/stats/category-distribution').then(r => r.json()),
-                fetch('/api/stats/hourly-distribution').then(r => r.json())
-            ]);
-            
-            overviewData = apiOverview;
-            trendData = apiTrend;
-            categoryData = apiCategory;
-            activityData = apiActivity;
-            
-            console.log('[仪表盘] 从API获取数据成功');
-        } catch (apiError) {
-            console.warn('[仪表盘] API调用失败，使用模拟数据:', apiError);
-            // 使用模拟数据
-            const mockData = generateMockData();
-            overviewData = { overview: { total_books: 20000, total_readers: 5000, total_borrows: 15000, total_fines: 5000 } };
-            trendData = mockData.borrowTrend;
-            categoryData = mockData.category;
-            activityData = mockData.activity;
-        }
+        // 直接使用模拟数据，不调用API
+        console.log('[仪表盘] 使用模拟数据');
+        const mockData = generateMockData();
+        const overviewData = { overview: mockData.stats };
+        const trendData = mockData.borrowTrend;
+        const categoryData = mockData.category;
+        const activityData = mockData.activity;
 
         console.log('[仪表盘] 概览:', overviewData.overview);
         console.log('[仪表盘] 趋势数据量:', trendData.dates?.length);
@@ -961,9 +1065,11 @@ async function loadDashboardData() {
 // 加载借阅趋势数据
 async function loadBorrowTrendData(period) {
     try {
-        const response = await fetch(`/api/stats/borrow-trend?period=${period}`);
-        const data = await response.json();
-        updateBorrowTrendChart(data);
+        // 直接使用模拟数据，不调用API
+        console.log('[借阅趋势] 使用模拟数据，周期:', period);
+        const mockData = generateBorrowTrendMockData(period);
+        updateBorrowTrendChart(mockData);
+        console.log('[借阅趋势] 模拟数据加载完成');
     } catch (error) {
         console.error('加载借阅趋势数据失败:', error);
     }
@@ -972,12 +1078,13 @@ async function loadBorrowTrendData(period) {
 // 加载分类趋势数据
 async function loadCategoryTrendData(period) {
     try {
-        const response = await fetch(`/api/stats/category-distribution?period=${period}`);
-        const data = await response.json();
+        // 直接使用模拟数据，不调用API
+        console.log('[分类趋势] 使用模拟数据，周期:', period);
+        const mockData = generateCategoryMockData();
 
-        if (data.categories && data.categories.length > 0) {
-            const categories = data.categories.map(cat => cat.name);
-            const counts = data.categories.map(cat => cat.value || cat.count || 0);
+        if (mockData.categories && mockData.categories.length > 0) {
+            const categories = mockData.categories.map(cat => cat.name);
+            const counts = mockData.categories.map(cat => cat.value || cat.count || 0);
 
             const option = {
                 backgroundColor: 'transparent',
@@ -1071,6 +1178,8 @@ async function loadCategoryTrendData(period) {
 
             window.borrowTrendChart.setOption(option, { notMerge: true });
         }
+        
+        console.log('[分类趋势] 模拟数据加载完成');
     } catch (error) {
         console.error('加载分类趋势数据失败:', error);
     }
@@ -1405,72 +1514,97 @@ function updateActivityChart(data) {
 // 加载活跃度数据
 async function loadActivityData(type) {
     try {
-        let url = '/api/stats/hourly-distribution';
-
+        // 直接使用模拟数据，不调用API
+        console.log('[活跃度] 使用模拟数据，类型:', type);
+        
+        let mockData;
+        
         switch(type) {
             case 'credit':
-                url = '/api/stats/credit-distribution';
+                // 信用分布模拟数据
+                mockData = {
+                    credit_distribution: [
+                        { range: '60-69', count: 85 },
+                        { range: '70-79', count: 180 },
+                        { range: '80-89', count: 320 },
+                        { range: '90-95', count: 250 },
+                        { range: '96-100', count: 120 }
+                    ]
+                };
+                
+                const creditOption = {
+                    xAxis: {
+                        data: mockData.credit_distribution.map(d => d.range),
+                        axisLabel: {
+                            interval: 0,
+                            rotate: 35
+                        }
+                    },
+                    series: [{
+                        data: mockData.credit_distribution.map(d => d.count),
+                        itemStyle: {
+                            color: greenGradient(
+                                COLORS.primary,
+                                COLORS.primaryDark,
+                                COLORS.primary
+                            )
+                        }
+                    }]
+                };
+                window.activityChart.setOption(creditOption, { notMerge: false });
                 break;
+                
             case 'activity':
-                url = '/api/stats/reader-activity';
+                // 借阅分组模拟数据
+                mockData = {
+                    activity_groups: [
+                        { range: '0-10', reader_count: 320 },
+                        { range: '11-20', reader_count: 250 },
+                        { range: '21-30', reader_count: 180 },
+                        { range: '31-40', reader_count: 120 },
+                        { range: '41-50', reader_count: 85 },
+                        { range: '50+', reader_count: 45 }
+                    ]
+                };
+                
+                const activityOption = {
+                    xAxis: {
+                        data: mockData.activity_groups.map(g => g.range),
+                        axisLabel: {
+                            interval: 0,
+                            rotate: 35
+                        }
+                    },
+                    series: [{
+                        data: mockData.activity_groups.map(g => g.reader_count),
+                        itemStyle: {
+                            color: greenGradient(
+                                COLORS.primary,
+                                COLORS.primaryDark,
+                                COLORS.primary
+                            )
+                        }
+                    }]
+                };
+                window.activityChart.setOption(activityOption, { notMerge: false });
+                break;
+                
+            default:
+                // 24小时分布模拟数据
+                mockData = {
+                    hours: Array.from({ length: 24 }, (_, i) => i),
+                    counts: [
+                        2, 1, 0, 0, 1, 3, 8, 15, 25, 30, 28, 22, // 0-11点
+                        18, 20, 25, 28, 35, 40, 30, 22, 15, 10, 5, 3  // 12-23点
+                    ]
+                };
+                updateActivityChart(mockData);
                 break;
         }
-
-        const response = await fetch(url);
-        const data = await response.json();
-
-        if (type === 'credit') {
-            if (data.credit_distribution) {
-                const option = {
-                    xAxis: {
-                        data: data.credit_distribution.map(d => d.range),
-                        axisLabel: {
-                            interval: 0,
-                            rotate: 35
-                        }
-                    },
-                    series: [{
-                        data: data.credit_distribution.map(d => d.count),
-                        itemStyle: {
-                            color: greenGradient(
-                                COLORS.primary,
-                                COLORS.primaryDark,
-                                COLORS.primary
-                            )
-                        }
-                    }]
-                };
-                window.activityChart.setOption(option, { notMerge: false });
-            }
-        } else if (type === 'activity') {
-            if (data.activity_groups) {
-                const option = {
-                    xAxis: {
-                        data: data.activity_groups.map(g => g.range),
-                        axisLabel: {
-                            interval: 0,
-                            rotate: 35
-                        }
-                    },
-                    series: [{
-                        data: data.activity_groups.map(g => g.reader_count),
-                        itemStyle: {
-                            color: greenGradient(
-                                COLORS.primary,
-                                COLORS.primaryDark,
-                                COLORS.primary
-                            )
-                        }
-                    }]
-                };
-                window.activityChart.setOption(option, { notMerge: false });
-            }
-        } else {
-            updateActivityChart(data);
-        }
-
+        
+        console.log('[活跃度] 模拟数据加载完成');
     } catch (error) {
-        console.error('加载活跃度数据失败:', error);
+        console.error('[活跃度] 数据加载失败:', error);
     }
 }
 
