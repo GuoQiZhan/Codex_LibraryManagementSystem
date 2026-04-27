@@ -1,8 +1,9 @@
 # HBase Thrift API连接
 try:
     import happybase
+    HAPPYBASE_AVAILABLE = True
 except ImportError:
-    raise ImportError("happybase模块未安装，请在Anaconda环境中执行: D:\\Application\\anaconda3\\Scripts\\pip install happybase")
+    HAPPYBASE_AVAILABLE = False
 
 from typing import List, Dict, Optional, Tuple
 import time
@@ -51,7 +52,7 @@ class HBaseDAL:
     _instance = None
     _lock = False
 
-    def __init__(self, host='localhost', port=9090, table_name='book'):
+    def __init__(self, host='192.168.10.99', port=9090, table_name='book'):
         self.host = host
         self.port = port
         self.table_name = table_name
@@ -66,7 +67,7 @@ class HBaseDAL:
         self._max_reconnect_attempts = 3
 
     @classmethod
-    def get_instance(cls, host='localhost', port=9090, table_name='book'):
+    def get_instance(cls, host='192.168.10.99', port=9090, table_name='book'):
         """获取单例实例"""
         if cls._instance is None:
             cls._instance = cls(host, port, table_name)
@@ -94,7 +95,8 @@ class HBaseDAL:
             self.host,
             self.port,
             transport='buffered',
-            timeout=15000
+            protocol='binary',
+            timeout=30000
         )
         self.connection.open()
 
@@ -136,12 +138,23 @@ class HBaseDAL:
         self.ensure_connection()
 
         books = []
-        for key, data in self.table.scan():
-            book_data = b2s(data)
-            book_data['_row_key'] = key.decode('utf-8') if isinstance(key, bytes) else key
-            if 'info:isbn' not in book_data or not book_data['info:isbn']:
-                book_data['info:isbn'] = book_data.get('_row_key', '')
-            books.append(book_data)
+        try:
+            scan_result = self.table.scan()
+            print(f"[DEBUG HBase] Scan result type: {type(scan_result).__name__}")
+            
+            for key, data in scan_result:
+                book_data = b2s(data)
+                book_data['_row_key'] = key.decode('utf-8') if isinstance(key, bytes) else key
+                if 'info:isbn' not in book_data or not book_data['info:isbn']:
+                    book_data['info:isbn'] = book_data.get('_row_key', '')
+                books.append(book_data)
+            
+            print(f"[DEBUG HBase] Successfully scanned {len(books)} books")
+        except Exception as e:
+            import traceback
+            print(f"[DEBUG HBase ERROR] Scan failed - Type: {type(e).__name__}, Message: {str(e)}")
+            print(f"[DEBUG HBase ERROR] Traceback:\n{traceback.format_exc()}")
+            raise
 
         self._all_books_cache = books
         self._all_books_cache_time = now
@@ -153,20 +166,12 @@ class HBaseDAL:
             raise Exception("HBase未连接，请先调用connect()方法")
 
         try:
-            data = self.table.row(isbn.encode('utf-8'))
-
-            if not data:
-                all_books = self._get_all_books_cached(use_cache=True)
-                for book in all_books:
-                    book_isbn = book.get('info:isbn', '')
-                    if book_isbn == isbn or book_isbn.replace('-', '') == isbn.replace('-', ''):
-                        return book
-                return None
-
-            book_data = b2s(data)
-            if 'info:isbn' not in book_data or not book_data['info:isbn']:
-                book_data['info:isbn'] = isbn
-            return book_data
+            all_books = self._get_all_books_cached(use_cache=True)
+            for book in all_books:
+                book_isbn = book.get('info:isbn', '')
+                if book_isbn == isbn or book_isbn.replace('-', '') == isbn.replace('-', ''):
+                    return book
+            return None
         except Exception as e:
             raise Exception(f"获取图书失败: {str(e)}")
 
@@ -294,9 +299,29 @@ class HBaseDAL:
             available_stock = 0
             borrowed_count = 0
 
-            for key, data in self.table.scan():
+            try:
+                scan_result = list(self.table.scan())
+            except Exception as scan_error:
+                error_str = str(scan_error)
+                if "Missing result" in error_str:
+                    raise Exception("HBase服务响应异常，请检查HBase Thrift服务是否正常运行")
+                raise Exception(f"HBase扫描失败: {error_str}")
+
+            if scan_result is None:
+                raise Exception("扫描结果为空")
+
+            if not isinstance(scan_result, list):
+                raise Exception(f"扫描结果类型错误: {type(scan_result).__name__}")
+
+            for key, data in scan_result:
                 total_books += 1
-                book = b2s(data)
+                
+                try:
+                    if data is None:
+                        continue
+                    book = b2s(data)
+                except Exception as decode_error:
+                    continue
 
                 cat = book.get('info:category_name', '未知分类')
                 if not cat:
@@ -304,8 +329,8 @@ class HBaseDAL:
                 categories[cat] = categories.get(cat, 0) + 1
 
                 try:
-                    ts = int(book.get('stock:total_stock', 0))
-                    avs = int(book.get('stock:available_stock', 0))
+                    ts = int(book.get('stock:total_stock', '0'))
+                    avs = int(book.get('stock:available_stock', '0'))
                     total_stock += ts
                     available_stock += avs
                     if ts > avs:
@@ -327,7 +352,10 @@ class HBaseDAL:
 
             return result
         except Exception as e:
-            raise Exception(f"获取统计失败: {str(e)}")
+            error_msg = str(e)
+            if "Missing result" in error_msg:
+                raise Exception("HBase服务返回无效数据，请检查HBase Thrift服务状态")
+            raise Exception(f"获取统计失败: {error_msg}")
 
     def get_categories_stats(self, use_cache: bool = True) -> List[Dict]:
         """获取分类统计"""
@@ -425,8 +453,16 @@ class HBaseDAL:
         if not self.connected:
             raise Exception("HBase未连接，请先调用connect()方法")
 
-        existing = self.table.row(isbn.encode('utf-8'))
-        if not existing:
+        all_books = self._get_all_books_cached(use_cache=True)
+        row_key = None
+        
+        for book in all_books:
+            book_isbn = book.get('info:isbn', '')
+            if book_isbn == isbn or book_isbn.replace('-', '') == isbn.replace('-', ''):
+                row_key = book.get('_row_key')
+                break
+        
+        if not row_key:
             raise Exception(f"图书 ISBN {isbn} 不存在")
 
         row_data = {}
@@ -437,7 +473,7 @@ class HBaseDAL:
                 else:
                     row_data[key.encode('utf-8')] = str(value).encode('utf-8')
 
-        self.table.put(isbn.encode('utf-8'), row_data)
+        self.table.put(row_key.encode('utf-8'), row_data)
         self.invalidate_cache()
         return True
 
@@ -446,11 +482,19 @@ class HBaseDAL:
         if not self.connected:
             raise Exception("HBase未连接，请先调用connect()方法")
 
-        existing = self.table.row(isbn.encode('utf-8'))
-        if not existing:
+        all_books = self._get_all_books_cached(use_cache=True)
+        row_key = None
+        
+        for book in all_books:
+            book_isbn = book.get('info:isbn', '')
+            if book_isbn == isbn or book_isbn.replace('-', '') == isbn.replace('-', ''):
+                row_key = book.get('_row_key')
+                break
+        
+        if not row_key:
             raise Exception(f"图书 ISBN {isbn} 不存在")
 
-        self.table.delete(isbn.encode('utf-8'))
+        self.table.delete(row_key.encode('utf-8'))
         self.invalidate_cache()
         return True
 
