@@ -161,7 +161,6 @@ async function loadBookStats() {
 
     } catch (error) {
         console.error('加载图书统计数据失败:', error);
-        showNotification('统计信息加载失败: ' + error.message, 'error');
     }
 }
 
@@ -645,7 +644,10 @@ function escapeHtml(text) {
 
 function editBook(isbn) {
     if (!isbn) return;
-    openEditBookModal(isbn);
+    closeBookDetailModal();
+    setTimeout(() => {
+        openEditBookModal(isbn);
+    }, 300);
 }
 
 let currentEditIsbn = null;
